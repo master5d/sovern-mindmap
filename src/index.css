@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+}
+
+/* FORCING VISIBILITY - AGGRESSIVE */
+html, body {
+  background-color: #020617 !important; /* Deep dark blue */
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  overflow: hidden !important;
+}
+
+#root {
+  width: 100% !important;
+  height: 100% !important;
+  display: block !important;
+  position: relative !important;
+}
+
+/* React Flow Dark Mode Defaults */
+.react-flow {
+  background-color: #020617;
+}
+
+.react-flow__background {
+  opacity: 0.3;
+}
