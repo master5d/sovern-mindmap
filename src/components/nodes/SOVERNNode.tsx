@@ -30,10 +30,12 @@ export const SOVERNNode = ({ data, selected }: NodeProps<{ data: SOVERNNodeData 
   const displayEnd = data.rollupDates?.end || data.dates?.end;
 
   return (
-    <div 
+    <div
       className={`px-4 py-3 shadow-2xl rounded-xl bg-slate-900 border-2 transition-all ${
         selected ? 'ring-4 ring-blue-500/20 border-blue-500 scale-105' : 'border-slate-800 hover:border-slate-700'
       }`}
+      // severity-цвет тикета (mc_hub feedback) — левый стрип; ноды без data.color не затронуты
+      style={data.color ? { borderLeftColor: data.color, borderLeftWidth: 4 } : undefined}
     >
       <Handle type="target" position={Position.Top} className="w-3 h-3 !bg-slate-700 border-2 border-slate-900" />
       

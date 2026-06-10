@@ -22,8 +22,10 @@ export const toJSONCanvas = (nodes: Node<SOVERNNodeData>[], edges: Edge[]): JSON
         'sovern:dates': node.data.dates,
         'sovern:impact': node.data.impact,
         'sovern:urgency': node.data.urgency,
+        feedback: node.data.feedback,
       },
     };
+    if (node.data.color) canvasNode.color = node.data.color;
     return canvasNode;
   });
 
@@ -57,6 +59,8 @@ export const fromJSONCanvas = (canvas: JSONCanvas): { nodes: Node<SOVERNNodeData
       dates: node.metadata?.['sovern:dates'],
       impact: node.metadata?.['sovern:impact'],
       urgency: node.metadata?.['sovern:urgency'],
+      feedback: node.metadata?.['feedback'],
+      color: node.color,
     },
   }));
 

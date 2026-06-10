@@ -42,6 +42,8 @@ export interface SOVERNNodeData {
   agent?: string;
   impact?: number;   // 1-10, Priority Matrix Y
   urgency?: number;  // 1-10, Priority Matrix X
+  color?: string;    // severity-цвет тикета из canvas (hex)
+  feedback?: Record<string, any>; // полный triage-блок mc_hub тикета
   [key: string]: any; // sovern:* metadata
 }
 
