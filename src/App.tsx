@@ -16,6 +16,8 @@ import { useWorkflowStore, ViewMode } from './store/useWorkflowStore';
 import { SOVERNNode } from './components/nodes/SOVERNNode';
 import { NodeSidebar } from './components/NodeSidebar';
 import { KanbanBoard } from './components/KanbanBoard';
+import { MatrixView } from './components/MatrixView';
+import { TimelineView } from './components/TimelineView';
 import { usePersistence } from './utils/persistence';
 import { SOVERNNodeData } from './types';
 
@@ -86,7 +88,7 @@ function Flow() {
     },
     // poll подхватил изменения board'а → layout пере-применён → вписать viewport
     () => {
-      if (useWorkflowStore.getState().viewMode !== 'kanban') {
+      if (useWorkflowStore.getState().viewMode === 'mindmap') {
         setTimeout(() => fitView({ padding: 0.15, duration: 350 }), 50);
       }
     },
@@ -95,7 +97,7 @@ function Flow() {
   // Смена layout перемещает ноды в новые canvas-координаты — viewport обязан
   // следовать за ними, иначе вид «пустой» (исходный kanban-баг).
   useEffect(() => {
-    if (viewMode === 'kanban') return; // kanban — DOM-вью, не canvas
+    if (viewMode !== 'mindmap') return; // canvas — только mindmap; остальное DOM-вью
     const t = setTimeout(() => fitView({ padding: 0.15, duration: 350 }), 50);
     return () => clearTimeout(t);
   }, [viewMode, fitView]);
@@ -117,8 +119,10 @@ function Flow() {
         <Controls className="bg-slate-900/80 border-slate-800 fill-slate-100" />
       </ReactFlow>
 
-      {/* Kanban — отдельный DOM-вью поверх canvas (полностью перекрывает его) */}
+      {/* DOM-вью поверх canvas (полностью перекрывают его); canvas — только mindmap */}
       {viewMode === 'kanban' && <KanbanBoard />}
+      {viewMode === 'matrix' && <MatrixView />}
+      {viewMode === 'timeline' && <TimelineView />}
 
       {/* Header — вне ReactFlow, виден во всех режимах */}
       <div className="absolute top-6 left-6 z-20 bg-slate-900/80 backdrop-blur-xl p-5 border border-slate-800 rounded-2xl shadow-2xl">

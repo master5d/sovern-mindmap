@@ -38,31 +38,31 @@ export const SOVERNNode = ({ data, selected }: NodeProps<{ data: SOVERNNodeData 
       style={data.color ? { borderLeftColor: data.color, borderLeftWidth: 4 } : undefined}
     >
       <Handle type="target" position={Position.Top} className="w-3 h-3 !bg-slate-700 border-2 border-slate-900" />
-      
-      <div className="flex flex-col min-w-[180px]">
+
+      <div className="flex flex-col min-w-[180px] max-w-[240px]">
         {/* Header */}
         <div className="flex items-center justify-between mb-2">
           <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: accentColor }}>
             {data.layer}
           </span>
-          <div 
+          <div
             className={`w-2.5 h-2.5 rounded-full shadow-lg ${
-              data.status === 'active' ? 'bg-green-500 animate-pulse shadow-green-500/50' : 
+              data.status === 'active' ? 'bg-green-500 animate-pulse shadow-green-500/50' :
               data.status === 'blocked' ? 'bg-red-500 shadow-red-500/50' : 'bg-slate-700'
-            }`} 
+            }`}
             title={`Status: ${data.status}`}
           />
         </div>
-        
-        {/* Title */}
-        <div className="font-bold text-sm text-slate-100 leading-tight mb-3">
+
+        {/* Title — clamp, иначе тикеты раздувают карту */}
+        <div className="font-bold text-sm text-slate-100 leading-tight line-clamp-3">
           {data.label}
         </div>
-        
+
         {/* Meta Grid */}
-        <div className="grid grid-cols-1 gap-2 mt-1">
-          {/* Tokens Budget */}
-          {(data.budget || data.rollupBudget) !== undefined && (
+        <div className="grid grid-cols-1 gap-2 mt-3 empty:mt-0">
+          {/* Tokens Budget — только если реально есть бюджет (0 — это шум) */}
+          {((data.rollupBudget ?? data.budget ?? 0) > 0) && (
             <div className="flex items-center text-[11px] text-slate-400 font-medium bg-slate-950/50 p-1.5 rounded-lg border border-slate-800">
               <Zap size={12} className="mr-2 text-yellow-400 fill-yellow-400/20" />
               <span className="flex-1">Tokens:</span>

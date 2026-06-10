@@ -9,16 +9,11 @@ import {
   applyNodeChanges,
   applyEdgeChanges,
 } from '@xyflow/react';
-import { SOVERNNodeData, SOVERNLayer } from '../types';
+import { SOVERNNodeData } from '../types';
 import { calculateBudgetRollup, calculateTimelineRollup } from '../utils/pmEngine';
-import { getLayoutedElements } from '../utils/layout';
+import { getClusteredElements } from '../utils/layout';
 
 export type ViewMode = 'mindmap' | 'matrix' | 'timeline' | 'kanban';
-
-const LAYER_ORDER: SOVERNLayer[] = [
-  'human', 'boss', 'skills', 'projects', 'coding', 'tools', 'gateway', 'memory', 'observability', 'hosting',
-  'lms', 'blog', 'hub', 'mentor', 'workers', 'course', 'infra',
-];
 
 interface WorkflowState {
   nodes: Node<SOVERNNodeData>[];
@@ -37,9 +32,7 @@ interface WorkflowState {
   setViewMode: (mode: ViewMode) => void;
   setN8nWebhookUrl: (url: string) => void;
   recalculate: () => void;
-  autoLayout: (direction?: string) => void;
-  applyMatrixLayout: () => void;
-  applyTimelineLayout: () => void;
+  autoLayout: () => void;
   triggerWebhook: (nodeId: string, eventType: string) => void;
 }
 
@@ -81,13 +74,11 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   setSelectedNode: (id) => set({ selectedNodeId: id }),
   updateNodeData: (id, dataUpdate) => {
     set({
-      nodes: get().nodes.map((node) => 
+      nodes: get().nodes.map((node) =>
         node.id === id ? { ...node, data: { ...node.data, ...dataUpdate } } : node
       ),
     });
     get().recalculate();
-    if (get().viewMode === 'matrix') get().applyMatrixLayout();
-    if (get().viewMode === 'timeline') get().applyTimelineLayout();
 
     if (dataUpdate.status) {
       get().triggerWebhook(id, 'node.status_changed');
@@ -96,9 +87,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   setViewMode: (mode) => {
     set({ viewMode: mode });
     if (mode === 'mindmap') get().autoLayout();
-    else if (mode === 'matrix') get().applyMatrixLayout();
-    else if (mode === 'timeline') get().applyTimelineLayout();
-    // kanban — DOM-вью (KanbanBoard), canvas-позиции не трогаем
+    // matrix / timeline / kanban — DOM-вью, canvas-позиции не трогаем
   },
   setN8nWebhookUrl: (url) => set({ n8nWebhookUrl: url }),
   recalculate: () => {
@@ -108,41 +97,10 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     updatedNodes = calculateTimelineRollup(updatedNodes, edges);
     set({ nodes: updatedNodes as any[] });
   },
-  autoLayout: (direction = 'TB') => {
+  autoLayout: () => {
     const { nodes, edges } = get();
-    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(nodes, edges, direction);
+    const { nodes: layoutedNodes, edges: layoutedEdges } = getClusteredElements(nodes, edges);
     set({ nodes: layoutedNodes as any[], edges: layoutedEdges });
-  },
-  applyMatrixLayout: () => {
-    const { nodes } = get();
-    const width = 1000, height = 800, padding = 100;
-    const layoutedNodes = nodes.map((node) => {
-      const urgency = node.data.urgency || 5, impact = node.data.impact || 5;
-      return {
-        ...node,
-        position: {
-          x: padding + ((urgency - 1) / 9) * (width - 2 * padding),
-          y: (height - padding) - ((impact - 1) / 9) * (height - 2 * padding),
-        },
-      };
-    });
-    set({ nodes: layoutedNodes as any[] });
-  },
-  applyTimelineLayout: () => {
-    const { nodes } = get();
-    const dayWidth = 10, layerHeight = 150, startX = 100;
-    const allStarts = nodes.map(n => new Date(n.data.dates?.start || Date.now()).getTime());
-    const minDate = new Date(Math.min(...allStarts));
-    const layoutedNodes = nodes.map((node) => {
-      const nodeStart = new Date(node.data.dates?.start || Date.now());
-      const daysFromStart = Math.max(0, (nodeStart.getTime() - minDate.getTime()) / (1000 * 60 * 60 * 24));
-      const layerIndex = LAYER_ORDER.indexOf(node.data.layer);
-      return {
-        ...node,
-        position: { x: startX + (daysFromStart * dayWidth), y: 100 + (layerIndex * layerHeight) },
-      };
-    });
-    set({ nodes: layoutedNodes as any[] });
   },
   triggerWebhook: (nodeId, _eventType) => {
     const node = get().nodes.find(n => n.id === nodeId);
