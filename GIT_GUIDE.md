@@ -7,7 +7,7 @@ This document describes how to push the **SOVERN MindMap Control Plane** to a re
 In your terminal, navigate to the project directory:
 
 ```powershell
-cd "C:\Warp Projects\01_Projects\MindMapping\sovern-mindmap"
+cd "C:\telo\Efforts\On\MindMapping\sovern-mindmap"
 git init
 ```
 

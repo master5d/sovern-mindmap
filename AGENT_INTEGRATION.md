@@ -21,7 +21,7 @@ npm run build
     "sovern-control-plane": {
       "command": "node",
       "args": [
-        "C:/Warp Projects/01_Projects/MindMapping/sovern-mindmap/dist-mcp/server.js"
+        "C:/telo/Efforts/On/MindMapping/sovern-mindmap/dist-mcp/server.js"
       ],
       "env": {
         "NODE_ENV": "production"
