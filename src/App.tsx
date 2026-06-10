@@ -1,21 +1,21 @@
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useBoardSync } from './hooks/useBoardSync';
 import {
   ReactFlow,
   Controls,
   Background,
-  Panel,
   Node,
   Edge,
   useReactFlow,
   ReactFlowProvider,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { RefreshCcw, Save, FolderOpen, Zap, Grid2X2, Network, CalendarRange, CloudSync, Columns, AlertTriangle, Terminal } from 'lucide-react';
+import { RefreshCcw, Save, FolderOpen, Zap, Grid2X2, Network, CalendarRange, Columns2 } from 'lucide-react';
 
 import { useWorkflowStore, ViewMode } from './store/useWorkflowStore';
 import { SOVERNNode } from './components/nodes/SOVERNNode';
 import { NodeSidebar } from './components/NodeSidebar';
+import { KanbanBoard } from './components/KanbanBoard';
 import { usePersistence } from './utils/persistence';
 import { SOVERNNodeData } from './types';
 
@@ -54,41 +54,54 @@ const prdEdges: Edge[] = [
   { id: 'e-boss-heur', source: 'boss-core', target: 'heuristic-checks' },
 ];
 
+const VIEW_BUTTONS: { mode: ViewMode; Icon: typeof Network; active: string }[] = [
+  { mode: 'mindmap', Icon: Network, active: 'bg-blue-600 text-white' },
+  { mode: 'matrix', Icon: Grid2X2, active: 'bg-purple-600 text-white' },
+  { mode: 'timeline', Icon: CalendarRange, active: 'bg-orange-600 text-white' },
+  { mode: 'kanban', Icon: Columns2, active: 'bg-emerald-600 text-white' },
+];
+
 function Flow() {
-  const { 
-    nodes, edges, onNodesChange, onEdgesChange, onConnect, 
-    setNodes, setEdges, recalculate, autoLayout, selectedNodeId,
-    viewMode, setViewMode, isSyncing
+  const {
+    nodes, edges, onNodesChange, onEdgesChange, onConnect,
+    setNodes, setEdges, recalculate, selectedNodeId,
+    viewMode, setViewMode, isSyncing,
   } = useWorkflowStore();
-  
+
   const { saveToFile, loadFromFile } = usePersistence();
   const { fitView } = useReactFlow();
   const initialized = useRef(false);
 
-  useBoardSync((loaded) => {
-    if (initialized.current) return;
-    initialized.current = true;
-    if (!loaded) {
-      // board недоступен (нет vite-плагина / файла) — fallback на demo PRD-граф
-      console.log('[SOVERN] board.canvas недоступен — demo-граф');
-      setNodes(prdNodes);
-      setEdges(prdEdges);
-    }
-    setTimeout(() => fitView({ padding: 0.2 }), 500);
-  });
+  useBoardSync(
+    (loaded) => {
+      if (initialized.current) return;
+      initialized.current = true;
+      if (!loaded) {
+        // board недоступен (нет vite-плагина / файла) — fallback на demo PRD-граф
+        console.log('[SOVERN] board.canvas недоступен — demo-граф');
+        setNodes(prdNodes);
+        setEdges(prdEdges);
+      }
+      setTimeout(() => fitView({ padding: 0.2 }), 500);
+    },
+    // poll подхватил изменения board'а → layout пере-применён → вписать viewport
+    () => {
+      if (useWorkflowStore.getState().viewMode !== 'kanban') {
+        setTimeout(() => fitView({ padding: 0.15, duration: 350 }), 50);
+      }
+    },
+  );
 
+  // Смена layout перемещает ноды в новые canvas-координаты — viewport обязан
+  // следовать за ними, иначе вид «пустой» (исходный kanban-баг).
   useEffect(() => {
-    console.log('[SOVERN] Mounting Flow...');
-  }, []);
+    if (viewMode === 'kanban') return; // kanban — DOM-вью, не canvas
+    const t = setTimeout(() => fitView({ padding: 0.15, duration: 350 }), 50);
+    return () => clearTimeout(t);
+  }, [viewMode, fitView]);
 
   return (
     <div style={{ width: '100vw', height: '100vh', backgroundColor: '#020617', position: 'relative' }}>
-      {/* High-visibility diagnostic panel */}
-      <div className="absolute top-0 left-0 w-full z-[100] bg-blue-600 text-white text-[10px] px-2 py-0.5 flex justify-between font-mono">
-        <span>SOVERN STATUS: ENGINE ATTACHED</span>
-        <span>MODES: {nodes.length} NODES LOADED</span>
-      </div>
-
       <ReactFlow
         nodes={nodes}
         edges={viewMode === 'mindmap' ? edges : []}
@@ -97,55 +110,57 @@ function Flow() {
         onConnect={onConnect}
         nodeTypes={nodeTypes as any}
         fitView
+        minZoom={0.05}
         colorMode="dark"
       >
         <Background color="#1e293b" variant={'dots' as any} gap={20} size={2} />
-        
-        {viewMode === 'kanban' && (
-          <div className="absolute inset-0 flex pointer-events-none px-[50px] pt-[80px]">
-            {['IDLE', 'PENDING', 'ACTIVE', 'DONE', 'BLOCKED'].map((status) => (
-              <div key={status} className="w-[320px] border-r border-slate-800/30 flex flex-col items-center">
-                <div className="text-[10px] font-black tracking-[0.4em] text-slate-600 bg-slate-900/80 px-5 py-2 rounded-full border border-slate-800 mb-6">{status}</div>
-              </div>
-            ))}
-          </div>
-        )}
-
         <Controls className="bg-slate-900/80 border-slate-800 fill-slate-100" />
-        
-        <Panel position="top-left" className="bg-slate-900/80 backdrop-blur-xl p-5 border border-slate-800 rounded-2xl shadow-2xl m-6">
-          <div className="flex items-center space-x-4">
-            <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center relative">
-               <div className="absolute inset-0 bg-blue-500 rounded-full animate-ping opacity-20" />
-               <Zap size={12} className="text-white fill-white relative" />
-            </div>
-            <div>
-              <h1 className="text-base font-black uppercase tracking-tighter text-white leading-none">SOVERN <span className="text-blue-500">Control Plane</span></h1>
-              <div className="mt-1.5 text-[10px] text-slate-500 font-bold tracking-[0.2em] uppercase flex items-center">
-                <span className={`w-1.5 h-1.5 rounded-full mr-2 ${isSyncing ? 'bg-orange-500 animate-spin' : 'bg-green-500'}`} />
-                {viewMode.toUpperCase()} Active
-              </div>
-            </div>
-          </div>
-        </Panel>
-
-        <Panel position="bottom-right" className="bg-slate-900/90 backdrop-blur-md p-2.5 border border-slate-800 rounded-2xl shadow-2xl m-6 flex space-x-3 items-center">
-          <div className="flex space-x-1.5 px-2 border-r border-slate-800">
-            <button onClick={() => setViewMode('mindmap')} className={`p-2.5 rounded-xl ${viewMode === 'mindmap' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}><Network size={18} /></button>
-            <button onClick={() => setViewMode('matrix')} className={`p-2.5 rounded-xl ${viewMode === 'matrix' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}><Grid2X2 size={18} /></button>
-            <button onClick={() => setViewMode('timeline')} className={`p-2.5 rounded-xl ${viewMode === 'timeline' ? 'bg-orange-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}><CalendarRange size={18} /></button>
-            <button onClick={() => setViewMode('kanban')} className={`p-2.5 rounded-xl ${viewMode === 'kanban' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}><Columns size={18} /></button>
-          </div>
-          <div className="flex space-x-1.5 px-2 border-r border-slate-800">
-            <button onClick={loadFromFile} className="p-2.5 text-slate-400 hover:text-orange-400"><FolderOpen size={18} /></button>
-            <button onClick={saveToFile} className="p-2.5 text-slate-400 hover:text-blue-400"><Save size={18} /></button>
-          </div>
-          <button onClick={recalculate} className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-slate-800 text-slate-400 hover:bg-white hover:text-slate-950 transition-all shadow-inner`}>
-            <RefreshCcw size={16} />
-            <span className="text-[11px] font-black tracking-widest uppercase text-xs">Sync</span>
-          </button>
-        </Panel>
       </ReactFlow>
+
+      {/* Kanban — отдельный DOM-вью поверх canvas (полностью перекрывает его) */}
+      {viewMode === 'kanban' && <KanbanBoard />}
+
+      {/* Header — вне ReactFlow, виден во всех режимах */}
+      <div className="absolute top-6 left-6 z-20 bg-slate-900/80 backdrop-blur-xl p-5 border border-slate-800 rounded-2xl shadow-2xl">
+        <div className="flex items-center space-x-4">
+          <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center relative">
+            <div className="absolute inset-0 bg-blue-500 rounded-full animate-ping opacity-20" />
+            <Zap size={12} className="text-white fill-white relative" />
+          </div>
+          <div>
+            <h1 className="text-base font-black uppercase tracking-tighter text-white leading-none">SOVERN <span className="text-blue-500">Control Plane</span></h1>
+            <div className="mt-1.5 text-[10px] text-slate-500 font-bold tracking-[0.2em] uppercase flex items-center">
+              <span className={`w-1.5 h-1.5 rounded-full mr-2 ${isSyncing ? 'bg-orange-500 animate-spin' : 'bg-green-500'}`} />
+              {viewMode.toUpperCase()} Active
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Toolbar — вне ReactFlow, виден во всех режимах */}
+      <div className="absolute bottom-6 right-6 z-20 bg-slate-900/90 backdrop-blur-md p-2.5 border border-slate-800 rounded-2xl shadow-2xl flex space-x-3 items-center">
+        <div className="flex space-x-1.5 px-2 border-r border-slate-800">
+          {VIEW_BUTTONS.map(({ mode, Icon, active }) => (
+            <button
+              key={mode}
+              onClick={() => setViewMode(mode)}
+              title={mode}
+              className={`p-2.5 rounded-xl ${viewMode === mode ? active : 'text-slate-400 hover:bg-slate-800'}`}
+            >
+              <Icon size={18} />
+            </button>
+          ))}
+        </div>
+        <div className="flex space-x-1.5 px-2 border-r border-slate-800">
+          <button onClick={loadFromFile} title="Load canvas" className="p-2.5 text-slate-400 hover:text-orange-400"><FolderOpen size={18} /></button>
+          <button onClick={saveToFile} title="Save canvas" className="p-2.5 text-slate-400 hover:text-blue-400"><Save size={18} /></button>
+        </div>
+        <button onClick={recalculate} className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-slate-800 text-slate-400 hover:bg-white hover:text-slate-950 transition-all shadow-inner">
+          <RefreshCcw size={16} />
+          <span className="text-[11px] font-black tracking-widest uppercase text-xs">Sync</span>
+        </button>
+      </div>
+
       {selectedNodeId && <NodeSidebar />}
     </div>
   );

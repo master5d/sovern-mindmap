@@ -10,6 +10,14 @@ export const NodeSidebar = () => {
 
   const handleChange = (field: string, value: any) => {
     updateNodeData(selectedNodeId!, { [field]: value });
+    // fb_-тикеты: статус персистится в feedback.jsonl через dev-middleware
+    if (field === 'status' && selectedNodeId!.startsWith('fb_')) {
+      fetch('/api/feedback/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: selectedNodeId, status: value }),
+      }).catch(() => {});
+    }
   };
 
   const handleDateChange = (field: 'start' | 'end', value: string) => {
@@ -55,13 +63,24 @@ export const NodeSidebar = () => {
               onChange={(e) => handleChange('layer', e.target.value)}
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500 transition-colors"
             >
-              <option value="human">Human</option>
-              <option value="boss">Boss</option>
-              <option value="skills">Skills</option>
-              <option value="coding">Coding</option>
-              <option value="tools">Tools</option>
-              <option value="memory">Memory</option>
-              <option value="projects">Projects</option>
+              <optgroup label="SOVERN">
+                <option value="human">Human</option>
+                <option value="boss">Boss</option>
+                <option value="skills">Skills</option>
+                <option value="coding">Coding</option>
+                <option value="tools">Tools</option>
+                <option value="memory">Memory</option>
+                <option value="projects">Projects</option>
+              </optgroup>
+              <optgroup label="mc_hub feedback">
+                <option value="lms">LMS</option>
+                <option value="blog">Blog</option>
+                <option value="hub">Hub</option>
+                <option value="mentor">Mentor</option>
+                <option value="workers">Workers</option>
+                <option value="course">Course</option>
+                <option value="infra">Infra</option>
+              </optgroup>
             </select>
           </div>
           <div className="space-y-2">
@@ -116,6 +135,22 @@ export const NodeSidebar = () => {
             />
           </div>
         </div>
+
+        {/* Triage info (mc_hub feedback тикеты) */}
+        {selectedNode.data.feedback && (
+          <div className="pt-4 border-t border-slate-800 space-y-2">
+            <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Triage</label>
+            <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-1.5 text-[11px]">
+              <div className="flex justify-between"><span className="text-slate-500">category</span><span className="text-slate-200 font-bold">{selectedNode.data.feedback.category}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">severity</span><span className="font-bold" style={{ color: selectedNode.data.color || '#e2e8f0' }}>{selectedNode.data.feedback.severity}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">confidence</span><span className="text-slate-200 font-bold">{selectedNode.data.feedback.confidence}</span></div>
+              {selectedNode.data.feedback.reason && (
+                <p className="text-slate-400 leading-snug pt-1.5 border-t border-slate-800/60">{selectedNode.data.feedback.reason}</p>
+              )}
+              <div className="text-slate-600 font-mono text-[10px] pt-1">{selectedNode.id}</div>
+            </div>
+          </div>
+        )}
 
         {/* Matrix Priority (New) */}
         <div className="pt-4 border-t border-slate-800 space-y-4">

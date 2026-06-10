@@ -9,7 +9,7 @@ import {
   applyNodeChanges,
   applyEdgeChanges,
 } from '@xyflow/react';
-import { SOVERNNodeData, SOVERNLayer, NodeStatus } from '../types';
+import { SOVERNNodeData, SOVERNLayer } from '../types';
 import { calculateBudgetRollup, calculateTimelineRollup } from '../utils/pmEngine';
 import { getLayoutedElements } from '../utils/layout';
 
@@ -19,8 +19,6 @@ const LAYER_ORDER: SOVERNLayer[] = [
   'human', 'boss', 'skills', 'projects', 'coding', 'tools', 'gateway', 'memory', 'observability', 'hosting',
   'lms', 'blog', 'hub', 'mentor', 'workers', 'course', 'infra',
 ];
-
-const STATUS_ORDER: NodeStatus[] = ['idle', 'pending', 'active', 'done', 'blocked'];
 
 interface WorkflowState {
   nodes: Node<SOVERNNodeData>[];
@@ -42,7 +40,6 @@ interface WorkflowState {
   autoLayout: (direction?: string) => void;
   applyMatrixLayout: () => void;
   applyTimelineLayout: () => void;
-  applyKanbanLayout: () => void;
   triggerWebhook: (nodeId: string, eventType: string) => void;
 }
 
@@ -91,8 +88,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     get().recalculate();
     if (get().viewMode === 'matrix') get().applyMatrixLayout();
     if (get().viewMode === 'timeline') get().applyTimelineLayout();
-    if (get().viewMode === 'kanban') get().applyKanbanLayout();
-    
+
     if (dataUpdate.status) {
       get().triggerWebhook(id, 'node.status_changed');
     }
@@ -102,7 +98,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     if (mode === 'mindmap') get().autoLayout();
     else if (mode === 'matrix') get().applyMatrixLayout();
     else if (mode === 'timeline') get().applyTimelineLayout();
-    else if (mode === 'kanban') get().applyKanbanLayout();
+    // kanban — DOM-вью (KanbanBoard), canvas-позиции не трогаем
   },
   setN8nWebhookUrl: (url) => set({ n8nWebhookUrl: url }),
   recalculate: () => {
@@ -144,34 +140,6 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       return {
         ...node,
         position: { x: startX + (daysFromStart * dayWidth), y: 100 + (layerIndex * layerHeight) },
-      };
-    });
-    set({ nodes: layoutedNodes as any[] });
-  },
-  applyKanbanLayout: () => {
-    const { nodes } = get();
-    const columnWidth = 320; // Slightly wider
-    const nodeWidth = 200;
-    const nodeHeightWithGap = 160;
-    const startX = 50;
-    const startY = 120;
-
-    const columnCounters: Record<string, number> = {};
-
-    const layoutedNodes = nodes.map((node) => {
-      const status = node.data.status || 'idle';
-      const columnIndex = STATUS_ORDER.indexOf(status);
-      const rowInColumn = columnCounters[status] || 0;
-      
-      columnCounters[status] = rowInColumn + 1;
-
-      return {
-        ...node,
-        position: {
-          // Center the 200px card inside the 320px column
-          x: startX + (columnIndex * columnWidth) + (columnWidth - nodeWidth) / 2,
-          y: startY + (rowInColumn * nodeHeightWithGap),
-        },
       };
     });
     set({ nodes: layoutedNodes as any[] });

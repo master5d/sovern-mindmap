@@ -9,10 +9,15 @@ const POLL_MS = 3000;
  * Сообщает об исходе первой загрузки через onFirstLoad (для fallback на demo-ноды).
  * Сравнение по сырому тексту файла — дешевле и надёжнее hash'а.
  */
-export const useBoardSync = (onFirstLoad: (loaded: boolean) => void) => {
+export const useBoardSync = (
+  onFirstLoad: (loaded: boolean) => void,
+  onChange?: () => void,
+) => {
   const lastText = useRef<string | null>(null);
   const onFirstLoadRef = useRef(onFirstLoad);
   onFirstLoadRef.current = onFirstLoad;
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
 
   useEffect(() => {
     let alive = true;
@@ -32,6 +37,7 @@ export const useBoardSync = (onFirstLoad: (loaded: boolean) => void) => {
           store.setEdges(edges);
           // пере-применить layout текущего вида, чтобы новые ноды встали по местам
           store.setViewMode(store.viewMode);
+          if (!first) onChangeRef.current?.();
         }
         if (first) onFirstLoadRef.current(true);
       } catch {
