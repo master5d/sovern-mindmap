@@ -3,17 +3,25 @@ import {
   Edge as RFEdge
 } from '@xyflow/react';
 
-export type SOVERNLayer = 
-  | 'human' 
-  | 'boss' 
-  | 'skills' 
-  | 'coding' 
-  | 'gateway' 
-  | 'memory' 
-  | 'tools' 
-  | 'observability' 
-  | 'hosting' 
-  | 'projects';
+export type SOVERNLayer =
+  | 'human'
+  | 'boss'
+  | 'skills'
+  | 'coding'
+  | 'gateway'
+  | 'memory'
+  | 'tools'
+  | 'observability'
+  | 'hosting'
+  | 'projects'
+  // mc_hub feedback areas (триаж-доска)
+  | 'lms'
+  | 'blog'
+  | 'hub'
+  | 'mentor'
+  | 'workers'
+  | 'course'
+  | 'infra';
 
 export type NodeStatus = 'pending' | 'active' | 'done' | 'blocked' | 'idle';
 
@@ -32,6 +40,8 @@ export interface SOVERNNodeData {
     end?: string;
   };
   agent?: string;
+  impact?: number;   // 1-10, Priority Matrix Y
+  urgency?: number;  // 1-10, Priority Matrix X
   [key: string]: any; // sovern:* metadata
 }
 

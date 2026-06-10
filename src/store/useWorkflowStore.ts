@@ -16,7 +16,8 @@ import { getLayoutedElements } from '../utils/layout';
 export type ViewMode = 'mindmap' | 'matrix' | 'timeline' | 'kanban';
 
 const LAYER_ORDER: SOVERNLayer[] = [
-  'human', 'boss', 'skills', 'projects', 'coding', 'tools', 'gateway', 'memory', 'observability', 'hosting'
+  'human', 'boss', 'skills', 'projects', 'coding', 'tools', 'gateway', 'memory', 'observability', 'hosting',
+  'lms', 'blog', 'hub', 'mentor', 'workers', 'course', 'infra',
 ];
 
 const STATUS_ORDER: NodeStatus[] = ['idle', 'pending', 'active', 'done', 'blocked'];

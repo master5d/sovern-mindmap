@@ -13,6 +13,14 @@ const layerColors: Record<string, string> = {
   observability: '#f97316', // orange-500
   hosting: '#6366f1', // indigo-500
   projects: '#f43f5e', // rose-500
+  // mc_hub feedback areas
+  lms: '#10b981',     // emerald-500
+  blog: '#8b5cf6',    // violet-500
+  hub: '#0ea5e9',     // sky-500
+  mentor: '#d946ef',  // fuchsia-500
+  workers: '#f59e0b', // amber-500
+  course: '#84cc16',  // lime-500
+  infra: '#64748b',   // slate-500
 };
 
 export const SOVERNNode = ({ data, selected }: NodeProps<{ data: SOVERNNodeData } & any>) => {

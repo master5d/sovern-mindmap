@@ -20,6 +20,8 @@ export const toJSONCanvas = (nodes: Node<SOVERNNodeData>[], edges: Edge[]): JSON
         'sovern:budget': node.data.budget,
         'sovern:agent': node.data.agent,
         'sovern:dates': node.data.dates,
+        'sovern:impact': node.data.impact,
+        'sovern:urgency': node.data.urgency,
       },
     };
     return canvasNode;
@@ -53,6 +55,8 @@ export const fromJSONCanvas = (canvas: JSONCanvas): { nodes: Node<SOVERNNodeData
       budget: node.metadata?.['sovern:budget'],
       agent: node.metadata?.['sovern:agent'],
       dates: node.metadata?.['sovern:dates'],
+      impact: node.metadata?.['sovern:impact'],
+      urgency: node.metadata?.['sovern:urgency'],
     },
   }));
 
