@@ -1,4 +1,5 @@
-import { useEffect, useCallback, useRef, useState } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
+import { useBoardSync } from './hooks/useBoardSync';
 import {
   ReactFlow,
   Controls,
@@ -62,26 +63,23 @@ function Flow() {
   
   const { saveToFile, loadFromFile } = usePersistence();
   const { fitView } = useReactFlow();
-  const [error, setError] = useState<string | null>(null);
   const initialized = useRef(false);
 
-  useEffect(() => {
-    try {
-      if (!initialized.current) {
-        console.log("[SOVERN] Mounting Flow...");
-        setNodes(prdNodes);
-        setEdges(prdEdges);
-        initialized.current = true;
-        setTimeout(() => fitView({ padding: 0.2 }), 500);
-      }
-    } catch (err: any) {
-      setError(err.message);
+  useBoardSync((loaded) => {
+    if (initialized.current) return;
+    initialized.current = true;
+    if (!loaded) {
+      // board недоступен (нет vite-плагина / файла) — fallback на demo PRD-граф
+      console.log('[SOVERN] board.canvas недоступен — demo-граф');
+      setNodes(prdNodes);
+      setEdges(prdEdges);
     }
-  }, [setNodes, setEdges, fitView]);
+    setTimeout(() => fitView({ padding: 0.2 }), 500);
+  });
 
-  if (error) {
-    return <div className="bg-red-900 text-white p-10 h-screen font-mono">CRITICAL ERROR: {error}</div>;
-  }
+  useEffect(() => {
+    console.log('[SOVERN] Mounting Flow...');
+  }, []);
 
   return (
     <div style={{ width: '100vw', height: '100vh', backgroundColor: '#020617', position: 'relative' }}>
