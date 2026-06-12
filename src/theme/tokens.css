@@ -17,6 +17,7 @@
   --text-muted: #64748b;
   --accent: #2563eb;
   --grid-dots: #1e293b;
+  --grid-opacity: 0.3;
   --lane-bg: rgba(148, 163, 184, 0.05);
 
   --status-idle: #64748b;
@@ -65,6 +66,7 @@
   --text-muted: #94a3b8;
   --accent: #2563eb;
   --grid-dots: #cbd5e1;
+  --grid-opacity: 0.6;
   --lane-bg: rgba(15, 23, 42, 0.03);
 
   --status-idle: #64748b;

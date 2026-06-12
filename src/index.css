@@ -36,5 +36,5 @@ body {
 }
 
 .react-flow__background {
-  opacity: 0.3;
+  opacity: var(--grid-opacity);
 }
