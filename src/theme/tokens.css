@@ -1,0 +1,98 @@
+/* Семантические переменные темы. dark = текущие cyberpunk-значения
+   (визуальный no-op для тёмной темы). Загруженные design-токены
+   (customTokens.ts) переопределяют эти же переменные поверх обеих тем. */
+
+:root,
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg-canvas: #020617;
+  --bg-surface: #0f172a;
+  --bg-surface-2: #020617;
+  --bg-hover: #1e293b;
+  --border: #1e293b;
+  --border-strong: #334155;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent: #2563eb;
+  --grid-dots: #1e293b;
+  --lane-bg: rgba(148, 163, 184, 0.05);
+
+  --status-idle: #64748b;
+  --status-pending: #eab308;
+  --status-active: #3b82f6;
+  --status-done: #22c55e;
+  --status-blocked: #ef4444;
+
+  --q-dofirst: #ef4444;
+  --q-schedule: #3b82f6;
+  --q-quick: #eab308;
+  --q-backlog: #64748b;
+
+  --layer-human: #ef4444;
+  --layer-boss: #a855f7;
+  --layer-skills: #3b82f6;
+  --layer-coding: #22c55e;
+  --layer-gateway: #eab308;
+  --layer-memory: #ec4899;
+  --layer-tools: #06b6d4;
+  --layer-observability: #f97316;
+  --layer-hosting: #6366f1;
+  --layer-projects: #f43f5e;
+  --layer-lms: #10b981;
+  --layer-blog: #8b5cf6;
+  --layer-hub: #0ea5e9;
+  --layer-mentor: #d946ef;
+  --layer-workers: #f59e0b;
+  --layer-course: #84cc16;
+  --layer-infra: #64748b;
+}
+
+/* Чистая профессиональная светлая тема: те же hue, плотность 600-700
+   для контраста на белом; неон/glow остаются только в dark. */
+[data-theme='light'] {
+  color-scheme: light;
+
+  --bg-canvas: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-surface-2: #f1f5f9;
+  --bg-hover: #e2e8f0;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --accent: #2563eb;
+  --grid-dots: #cbd5e1;
+  --lane-bg: rgba(15, 23, 42, 0.03);
+
+  --status-idle: #64748b;
+  --status-pending: #ca8a04;
+  --status-active: #2563eb;
+  --status-done: #16a34a;
+  --status-blocked: #dc2626;
+
+  --q-dofirst: #dc2626;
+  --q-schedule: #2563eb;
+  --q-quick: #ca8a04;
+  --q-backlog: #64748b;
+
+  --layer-human: #dc2626;
+  --layer-boss: #9333ea;
+  --layer-skills: #2563eb;
+  --layer-coding: #16a34a;
+  --layer-gateway: #ca8a04;
+  --layer-memory: #db2777;
+  --layer-tools: #0891b2;
+  --layer-observability: #ea580c;
+  --layer-hosting: #4f46e5;
+  --layer-projects: #e11d48;
+  --layer-lms: #059669;
+  --layer-blog: #7c3aed;
+  --layer-hub: #0284c7;
+  --layer-mentor: #c026d3;
+  --layer-workers: #d97706;
+  --layer-course: #65a30d;
+  --layer-infra: #64748b;
+}
