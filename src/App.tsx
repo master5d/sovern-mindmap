@@ -12,6 +12,8 @@ import {
 import '@xyflow/react/dist/style.css';
 import { RefreshCcw, Save, FolderOpen, Zap, Grid2X2, Network, CalendarRange, Columns2 } from 'lucide-react';
 
+import { ThemeSwitcher } from './components/ThemeSwitcher';
+import { useThemeStore } from './store/useThemeStore';
 import { useWorkflowStore, ViewMode } from './store/useWorkflowStore';
 import { SOVERNNode } from './components/nodes/SOVERNNode';
 import { NodeSidebar } from './components/NodeSidebar';
@@ -70,6 +72,7 @@ function Flow() {
     viewMode, setViewMode, isSyncing,
   } = useWorkflowStore();
 
+  const resolved = useThemeStore((s) => s.resolved);
   const { saveToFile, loadFromFile } = usePersistence();
   const { fitView } = useReactFlow();
   const initialized = useRef(false);
@@ -113,9 +116,9 @@ function Flow() {
         nodeTypes={nodeTypes as any}
         fitView
         minZoom={0.05}
-        colorMode="dark"
+        colorMode={resolved}
       >
-        <Background color="#1e293b" variant={'dots' as any} gap={20} size={2} />
+        <Background color={resolved === 'dark' ? '#1e293b' : '#cbd5e1'} variant={'dots' as any} gap={20} size={2} />
         <Controls className="bg-slate-900/80 border-slate-800 fill-slate-100" />
       </ReactFlow>
 
@@ -143,6 +146,7 @@ function Flow() {
 
       {/* Toolbar — вне ReactFlow, виден во всех режимах */}
       <div className="absolute bottom-6 right-6 z-20 bg-slate-900/90 backdrop-blur-md p-2.5 border border-slate-800 rounded-2xl shadow-2xl flex space-x-3 items-center">
+        <ThemeSwitcher />
         <div className="flex space-x-1.5 px-2 border-r border-slate-800">
           {VIEW_BUTTONS.map(({ mode, Icon, active }) => (
             <button
