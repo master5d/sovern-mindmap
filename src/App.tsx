@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useBoardSync } from './hooks/useBoardSync';
 import {
   ReactFlow,
@@ -13,6 +13,7 @@ import '@xyflow/react/dist/style.css';
 import { RefreshCcw, Save, FolderOpen, Zap, Grid2X2, Network, CalendarRange, Columns2 } from 'lucide-react';
 
 import { ThemeSwitcher } from './components/ThemeSwitcher';
+import { TokenUpload } from './components/TokenUpload';
 import { useThemeStore } from './store/useThemeStore';
 import { useWorkflowStore, ViewMode } from './store/useWorkflowStore';
 import { SOVERNNode } from './components/nodes/SOVERNNode';
@@ -76,6 +77,14 @@ function Flow() {
   const { saveToFile, loadFromFile } = usePersistence();
   const { fitView } = useReactFlow();
   const initialized = useRef(false);
+
+  const [notice, setNotice] = useState<string | null>(null);
+  const noticeTimer = useRef<number | undefined>(undefined);
+  const notify = (msg: string) => {
+    setNotice(msg);
+    window.clearTimeout(noticeTimer.current);
+    noticeTimer.current = window.setTimeout(() => setNotice(null), 3500);
+  };
 
   useBoardSync(
     (loaded) => {
@@ -147,6 +156,7 @@ function Flow() {
       {/* Toolbar — вне ReactFlow, виден во всех режимах */}
       <div className="absolute bottom-6 right-6 z-20 bg-surface/90 backdrop-blur-md p-2.5 border border-edge rounded-2xl shadow-2xl flex space-x-3 items-center">
         <ThemeSwitcher />
+        <TokenUpload notify={notify} />
         <div className="flex space-x-1.5 px-2 border-r border-edge">
           {VIEW_BUTTONS.map(({ mode, Icon, active }) => (
             <button
@@ -170,6 +180,11 @@ function Flow() {
       </div>
 
       {selectedNodeId && <NodeSidebar />}
+      {notice && (
+        <div className="absolute bottom-24 right-6 z-30 bg-surface border border-edge text-primary text-xs px-4 py-2.5 rounded-xl shadow-2xl">
+          {notice}
+        </div>
+      )}
     </div>
   );
 }
