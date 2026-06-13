@@ -1,14 +1,13 @@
 import dagre from 'dagre';
 import { Node, Edge } from '@xyflow/react';
 
-const dagreGraph = new dagre.graphlib.Graph();
-dagreGraph.setDefaultEdgeLabel(() => ({}));
-
 // Adjust these to match or slightly exceed the actual node size + desired padding
 const nodeWidth = 260;
 const nodeHeight = 110;
 
 export const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => {
+  const dagreGraph = new dagre.graphlib.Graph();
+  dagreGraph.setDefaultEdgeLabel(() => ({}));
   const isHorizontal = direction === 'LR';
   
   // Set global graph layout options
@@ -85,4 +84,72 @@ export const getClusteredElements = (nodes: Node[], edges: Edge[]) => {
     position: positioned.get(node.id) ?? node.position,
   }));
   return { nodes: layoutedNodes, edges };
+};
+
+export const LANE_HEIGHT = 180;
+const LANE_LABEL_W = 140;
+const NODE_GAP_X = 280;
+
+/** Diagram view · Tree: строгий org-chart — dagre TB, ноды залочены. */
+export const getTreeLayout = (nodes: Node[], edges: Edge[]) => {
+  const content = nodes.filter((n) => n.type !== 'lane');
+  const { nodes: laid } = getLayoutedElements(content, edges, 'TB');
+  return { nodes: laid.map((n) => ({ ...n, draggable: false })), edges };
+};
+
+/** Diagram view · Lanes: swimlane на layer; x — dagre-ранг (LR) по зависимостям. */
+export const getLaneLayout = (nodes: Node[], edges: Edge[]) => {
+  const content = nodes.filter((n) => n.type !== 'lane');
+  const { nodes: lr } = getLayoutedElements(content, edges, 'LR');
+  const xById = new Map(lr.map((n) => [n.id, n.position.x]));
+
+  const laneOrder: string[] = [];
+  content.forEach((n) => {
+    const layer = String((n.data as any)?.layer ?? 'infra');
+    if (!laneOrder.includes(layer)) laneOrder.push(layer);
+  });
+
+  const laid = content.map((n) => {
+    const layer = String((n.data as any)?.layer ?? 'infra');
+    const row = laneOrder.indexOf(layer);
+    return {
+      ...n,
+      draggable: false,
+      targetPosition: 'left' as const,
+      sourcePosition: 'right' as const,
+      position: {
+        x: LANE_LABEL_W + (xById.get(n.id) ?? 0),
+        y: row * LANE_HEIGHT + (LANE_HEIGHT - 110) / 2,
+      },
+    };
+  });
+
+  // внутри lane разводим ноды одного dagre-ранга (иначе наложатся)
+  const byLane = new Map<string, typeof laid>();
+  laid.forEach((n) => {
+    const layer = String((n.data as any)?.layer ?? 'infra');
+    (byLane.get(layer) ?? byLane.set(layer, []).get(layer)!).push(n);
+  });
+  byLane.forEach((arr) => {
+    arr.sort((a, b) => a.position.x - b.position.x);
+    let minNext = -Infinity;
+    arr.forEach((n) => {
+      if (n.position.x < minNext) n.position.x = minNext;
+      minNext = n.position.x + NODE_GAP_X;
+    });
+  });
+
+  const maxX = Math.max(...laid.map((n) => n.position.x + (n.measured?.width ?? 260)), 600);
+  const lanes: Node[] = laneOrder.map((layer, row) => ({
+    id: `lane_${layer}`,
+    type: 'lane',
+    position: { x: 0, y: row * LANE_HEIGHT },
+    data: { label: layer },
+    draggable: false,
+    selectable: false,
+    zIndex: -1,
+    style: { width: maxX + 80, height: LANE_HEIGHT },
+  }));
+
+  return { nodes: [...lanes, ...laid], edges };
 };
