@@ -15,8 +15,12 @@ export function applyCustomTokens(jsonText: string): TokenParseResult {
   if (entries.length === 0) {
     throw new Error(`no recognized color tokens (${result.warnings.length} skipped)`);
   }
-  // значения провалидированы COLOR_RE в парсере, ключи — из фиксированной карты
-  const css = `:root{${entries.map(([k, v]) => `${k}:${v}`).join(';')}}`;
+  // значения провалидированы COLOR_RE в парсере, ключи — из фиксированной карты.
+  // Перекрываем во всех theme-scope'ах: та же специфичность, что у [data-theme=…]
+  // блоков в tokens.css, а этот <style> идёт позже в <head> — значит выигрывает и
+  // для dark, и для light, не завися от порядка правил внутри tokens.css.
+  const decls = entries.map(([k, v]) => `${k}:${v}`).join(';');
+  const css = `:root,[data-theme='dark'],[data-theme='light']{${decls}}`;
   let el = document.getElementById(STYLE_ID) as HTMLStyleElement | null;
   if (!el) {
     el = document.createElement('style');
