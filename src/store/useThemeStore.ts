@@ -37,8 +37,6 @@ export function initTheme() {
     document.documentElement.setAttribute('data-theme', resolved);
 
   useThemeStore.subscribe((s) => apply(s.resolved));
-  // Перечитать из localStorage (нужно после rehydrate и для тестов с очищенным хранилищем)
-  useThemeStore.persist.rehydrate();
   // resolved мог устареть после rehydrate из localStorage — пересчитать
   useThemeStore.getState().syncSystem();
   apply(useThemeStore.getState().resolved);

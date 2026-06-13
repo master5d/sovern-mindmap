@@ -16,6 +16,8 @@ describe('initTheme', () => {
   beforeEach(() => {
     localStorage.clear();
     document.documentElement.removeAttribute('data-theme');
+    // Стор — модульный синглтон; сбросить к дефолтам, иначе состояние течёт между тестами
+    useThemeStore.setState({ mode: 'system', resolved: 'dark' });
   });
 
   it('applies resolved theme to <html> and reacts to setMode', () => {
