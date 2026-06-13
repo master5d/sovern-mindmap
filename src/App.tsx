@@ -98,7 +98,8 @@ function Flow() {
     setExporting(true);
     try {
       if (viewMode === 'mindmap' || viewMode === 'diagram') {
-        await exportCanvasPng(nodes, viewMode);
+        // lane-фоны полноширинные — исключаем из bounds, иначе fit-to-content раздувается
+        await exportCanvasPng(nodes.filter((n) => n.type !== 'lane'), viewMode);
       } else {
         await exportDomViewPng(viewMode);
       }
