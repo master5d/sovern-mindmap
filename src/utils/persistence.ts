@@ -26,7 +26,7 @@ export const usePersistence = () => {
       });
 
       if (filePath) {
-        const canvasData = toJSONCanvas(nodes, edges);
+        const canvasData = toJSONCanvas(nodes.filter((n) => n.type !== 'lane'), edges);
         await writeTextFile(filePath, JSON.stringify(canvasData, null, 2));
       }
     } catch (error) {

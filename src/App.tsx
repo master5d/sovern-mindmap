@@ -8,15 +8,17 @@ import {
   Edge,
   useReactFlow,
   ReactFlowProvider,
+  MarkerType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { RefreshCcw, Save, FolderOpen, Zap, Grid2X2, Network, CalendarRange, Columns2 } from 'lucide-react';
+import { RefreshCcw, Save, FolderOpen, Zap, Grid2X2, Network, CalendarRange, Columns2, Workflow, ListTree, Rows3, Eye, EyeOff } from 'lucide-react';
 
 import { ThemeSwitcher } from './components/ThemeSwitcher';
 import { TokenUpload } from './components/TokenUpload';
 import { useThemeStore } from './store/useThemeStore';
 import { useWorkflowStore, ViewMode } from './store/useWorkflowStore';
 import { SOVERNNode } from './components/nodes/SOVERNNode';
+import { LaneNode } from './components/nodes/LaneNode';
 import { NodeSidebar } from './components/NodeSidebar';
 import { KanbanBoard } from './components/KanbanBoard';
 import { MatrixView } from './components/MatrixView';
@@ -26,6 +28,7 @@ import { SOVERNNodeData } from './types';
 
 const nodeTypes = {
   sovern: SOVERNNode,
+  lane: LaneNode,
 };
 
 const prdNodes: Node<SOVERNNodeData>[] = [
@@ -61,6 +64,7 @@ const prdEdges: Edge[] = [
 
 const VIEW_BUTTONS: { mode: ViewMode; Icon: typeof Network; active: string }[] = [
   { mode: 'mindmap', Icon: Network, active: 'bg-blue-600 text-white' },
+  { mode: 'diagram', Icon: Workflow, active: 'bg-cyan-600 text-white' },
   { mode: 'matrix', Icon: Grid2X2, active: 'bg-purple-600 text-white' },
   { mode: 'timeline', Icon: CalendarRange, active: 'bg-orange-600 text-white' },
   { mode: 'kanban', Icon: Columns2, active: 'bg-emerald-600 text-white' },
@@ -72,6 +76,7 @@ function Flow() {
     setNodes, setEdges, recalculate, selectedNodeId,
     viewMode, setViewMode, isSyncing,
   } = useWorkflowStore();
+  const { diagramLayout, setDiagramLayout, presentationMode, setPresentationMode } = useWorkflowStore();
 
   const resolved = useThemeStore((s) => s.resolved);
   const { saveToFile, loadFromFile } = usePersistence();
@@ -100,7 +105,7 @@ function Flow() {
     },
     // poll подхватил изменения board'а → layout пере-применён → вписать viewport
     () => {
-      if (useWorkflowStore.getState().viewMode === 'mindmap') {
+      if (['mindmap', 'diagram'].includes(useWorkflowStore.getState().viewMode)) {
         setTimeout(() => fitView({ padding: 0.15, duration: 350 }), 50);
       }
     },
@@ -109,26 +114,39 @@ function Flow() {
   // Смена layout перемещает ноды в новые canvas-координаты — viewport обязан
   // следовать за ними, иначе вид «пустой» (исходный kanban-баг).
   useEffect(() => {
-    if (viewMode !== 'mindmap') return; // canvas — только mindmap; остальное DOM-вью
+    if (viewMode !== 'mindmap' && viewMode !== 'diagram') return; // canvas-вью; остальное DOM
     const t = setTimeout(() => fitView({ padding: 0.15, duration: 350 }), 50);
     return () => clearTimeout(t);
-  }, [viewMode, fitView]);
+  }, [viewMode, diagramLayout, fitView]);
+
+  const isCanvasView = viewMode === 'mindmap' || viewMode === 'diagram';
+  const displayEdges = !isCanvasView
+    ? []
+    : viewMode === 'diagram'
+      ? edges.map((e) => ({
+          ...e,
+          type: 'smoothstep' as const,
+          animated: false,
+          markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
+        }))
+      : edges;
 
   return (
     <div style={{ width: '100vw', height: '100vh', backgroundColor: 'var(--bg-canvas)', position: 'relative' }}>
       <ReactFlow
         nodes={nodes}
-        edges={viewMode === 'mindmap' ? edges : []}
+        edges={displayEdges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         nodeTypes={nodeTypes as any}
+        nodesDraggable={viewMode !== 'diagram'}
         fitView
         minZoom={0.05}
         colorMode={resolved}
       >
         <Background color={resolved === 'dark' ? '#1e293b' : '#cbd5e1'} variant={'dots' as any} gap={20} size={2} />
-        <Controls className="bg-surface/80 border-edge fill-[var(--text-primary)]" />
+        {!presentationMode && <Controls className="bg-surface/80 border-edge fill-[var(--text-primary)]" />}
       </ReactFlow>
 
       {/* DOM-вью поверх canvas (полностью перекрывают его); canvas — только mindmap */}
@@ -136,48 +154,87 @@ function Flow() {
       {viewMode === 'matrix' && <MatrixView />}
       {viewMode === 'timeline' && <TimelineView />}
 
-      {/* Header — вне ReactFlow, виден во всех режимах */}
-      <div className="absolute top-6 left-6 z-20 bg-surface/80 backdrop-blur-xl p-5 border border-edge rounded-2xl shadow-2xl">
-        <div className="flex items-center space-x-4">
-          <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center relative">
-            <div className="absolute inset-0 bg-blue-500 rounded-full animate-ping opacity-20" />
-            <Zap size={12} className="text-white fill-white relative" />
-          </div>
-          <div>
-            <h1 className="text-base font-black uppercase tracking-tighter text-primary leading-none">SOVERN <span className="text-accent">Control Plane</span></h1>
-            <div className="mt-1.5 text-[10px] text-muted font-bold tracking-[0.2em] uppercase flex items-center">
-              <span className={`w-1.5 h-1.5 rounded-full mr-2 ${isSyncing ? 'bg-orange-500 animate-spin' : 'bg-green-500'}`} />
-              {viewMode.toUpperCase()} Active
+      {/* Header — вне ReactFlow, виден во всех режимах (кроме presentation) */}
+      {!presentationMode && (
+        <div className="absolute top-6 left-6 z-20 bg-surface/80 backdrop-blur-xl p-5 border border-edge rounded-2xl shadow-2xl">
+          <div className="flex items-center space-x-4">
+            <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center relative">
+              <div className="absolute inset-0 bg-blue-500 rounded-full animate-ping opacity-20" />
+              <Zap size={12} className="text-white fill-white relative" />
+            </div>
+            <div>
+              <h1 className="text-base font-black uppercase tracking-tighter text-primary leading-none">SOVERN <span className="text-accent">Control Plane</span></h1>
+              <div className="mt-1.5 text-[10px] text-muted font-bold tracking-[0.2em] uppercase flex items-center">
+                <span className={`w-1.5 h-1.5 rounded-full mr-2 ${isSyncing ? 'bg-orange-500 animate-spin' : 'bg-green-500'}`} />
+                {viewMode.toUpperCase()} Active
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Toolbar — вне ReactFlow, виден во всех режимах */}
-      <div className="absolute bottom-6 right-6 z-20 bg-surface/90 backdrop-blur-md p-2.5 border border-edge rounded-2xl shadow-2xl flex space-x-3 items-center">
-        <ThemeSwitcher />
-        <TokenUpload notify={notify} />
-        <div className="flex space-x-1.5 px-2 border-r border-edge">
-          {VIEW_BUTTONS.map(({ mode, Icon, active }) => (
-            <button
-              key={mode}
-              onClick={() => setViewMode(mode)}
-              title={mode}
-              className={`p-2.5 rounded-xl ${viewMode === mode ? active : 'text-secondary hover:bg-hover'}`}
-            >
-              <Icon size={18} />
-            </button>
-          ))}
+      {/* Toolbar — вне ReactFlow, виден во всех режимах (кроме presentation) */}
+      {!presentationMode && (
+        <div className="absolute bottom-6 right-6 z-20 bg-surface/90 backdrop-blur-md p-2.5 border border-edge rounded-2xl shadow-2xl flex space-x-3 items-center">
+          <ThemeSwitcher />
+          <TokenUpload notify={notify} />
+          <div className="flex space-x-1.5 px-2 border-r border-edge">
+            {VIEW_BUTTONS.map(({ mode, Icon, active }) => (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                title={mode}
+                className={`p-2.5 rounded-xl ${viewMode === mode ? active : 'text-secondary hover:bg-hover'}`}
+              >
+                <Icon size={18} />
+              </button>
+            ))}
+          </div>
+          <div className="flex space-x-1.5 px-2 border-r border-edge">
+            <button onClick={loadFromFile} title="Load canvas" className="p-2.5 text-secondary hover:text-orange-400"><FolderOpen size={18} /></button>
+            <button onClick={saveToFile} title="Save canvas" className="p-2.5 text-secondary hover:text-accent"><Save size={18} /></button>
+          </div>
+          <button onClick={recalculate} className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-hover text-secondary hover:bg-primary hover:text-canvas transition-all shadow-inner">
+            <RefreshCcw size={16} />
+            <span className="text-[11px] font-black tracking-widest uppercase text-xs">Sync</span>
+          </button>
         </div>
-        <div className="flex space-x-1.5 px-2 border-r border-edge">
-          <button onClick={loadFromFile} title="Load canvas" className="p-2.5 text-secondary hover:text-orange-400"><FolderOpen size={18} /></button>
-          <button onClick={saveToFile} title="Save canvas" className="p-2.5 text-secondary hover:text-accent"><Save size={18} /></button>
+      )}
+
+      {viewMode === 'diagram' && !presentationMode && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 bg-surface/90 backdrop-blur-md p-2 border border-edge rounded-2xl shadow-2xl flex space-x-1.5">
+          <button
+            onClick={() => setDiagramLayout('tree')}
+            title="Tree layout"
+            className={`p-2.5 rounded-xl ${diagramLayout === 'tree' ? 'bg-accent text-white' : 'text-secondary hover:bg-hover'}`}
+          >
+            <ListTree size={18} />
+          </button>
+          <button
+            onClick={() => setDiagramLayout('lanes')}
+            title="Dependency lanes"
+            className={`p-2.5 rounded-xl ${diagramLayout === 'lanes' ? 'bg-accent text-white' : 'text-secondary hover:bg-hover'}`}
+          >
+            <Rows3 size={18} />
+          </button>
+          <button
+            onClick={() => setPresentationMode(true)}
+            title="Presentation mode"
+            className="p-2.5 rounded-xl text-secondary hover:bg-hover"
+          >
+            <Eye size={18} />
+          </button>
         </div>
-        <button onClick={recalculate} className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-hover text-secondary hover:bg-primary hover:text-canvas transition-all shadow-inner">
-          <RefreshCcw size={16} />
-          <span className="text-[11px] font-black tracking-widest uppercase text-xs">Sync</span>
+      )}
+      {presentationMode && (
+        <button
+          onClick={() => setPresentationMode(false)}
+          title="Exit presentation"
+          className="absolute bottom-6 right-6 z-20 p-3 rounded-xl bg-surface/90 border border-edge text-secondary hover:text-primary shadow-2xl"
+        >
+          <EyeOff size={18} />
         </button>
-      </div>
+      )}
 
       {selectedNodeId && <NodeSidebar />}
       {notice && (
