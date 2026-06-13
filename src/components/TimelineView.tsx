@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useWorkflowStore } from '../store/useWorkflowStore';
 import { SOVERNNodeData } from '../types';
 import { Node } from '@xyflow/react';
-import { AREA_COLORS, CATEGORY_EMOJI, STATUS_COLORS, stripEmoji } from '../utils/feedback';
+import { AREA_COLORS, CATEGORY_EMOJI, STATUS_COLORS, stripEmoji, alpha } from '../utils/feedback';
 
 type TicketNode = Node<SOVERNNodeData>;
 
@@ -18,17 +18,17 @@ function TimelineCard({ node }: { node: TicketNode }) {
     <button
       onClick={() => setSelectedNode(node.id)}
       title={stripEmoji(node.data.label)}
-      className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 bg-slate-900/90 text-left transition-all hover:border-slate-500 hover:translate-y-[-1px] w-[180px] ${
-        selected ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-slate-700/70'
+      className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 bg-surface/90 text-left transition-all hover:border-edge-strong hover:translate-y-[-1px] w-[180px] ${
+        selected ? 'border-accent ring-2 ring-accent/20' : 'border-edge-strong/70'
       }`}
-      style={{ borderLeftColor: node.data.color || '#334155', borderLeftWidth: 3 }}
+      style={{ borderLeftColor: node.data.color || 'var(--border-strong)', borderLeftWidth: 3 }}
     >
       <span className="text-[11px] shrink-0">{CATEGORY_EMOJI[fb?.category] ?? '📌'}</span>
-      <span className="text-[10px] text-slate-200 truncate leading-tight">{stripEmoji(node.data.label)}</span>
+      <span className="text-[10px] text-primary truncate leading-tight">{stripEmoji(node.data.label)}</span>
       <span
         className="ml-auto shrink-0 w-1.5 h-1.5 rounded-full"
         title={node.data.status}
-        style={{ backgroundColor: STATUS_COLORS[node.data.status] || '#64748b' }}
+        style={{ backgroundColor: STATUS_COLORS[node.data.status] || 'var(--status-idle)' }}
       />
     </button>
   );
@@ -64,20 +64,20 @@ export function TimelineView() {
 
   if (tickets.length === 0) {
     return (
-      <div className="absolute inset-0 flex items-center justify-center bg-[#020617] z-10">
-        <div className="text-slate-600 text-xs uppercase tracking-widest font-bold">нет тикетов с датами</div>
+      <div className="absolute inset-0 flex items-center justify-center bg-canvas z-10">
+        <div className="text-muted text-xs uppercase tracking-widest font-bold">нет тикетов с датами</div>
       </div>
     );
   }
 
   return (
-    <div className="absolute inset-0 flex flex-col bg-[#020617] z-10 pt-44 pb-8 px-10">
-      <div className="relative flex-1 min-h-0 overflow-y-auto custom-scrollbar rounded-2xl border border-slate-800/60">
+    <div className="absolute inset-0 flex flex-col bg-canvas z-10 pt-44 pb-8 px-10">
+      <div className="relative flex-1 min-h-0 overflow-y-auto custom-scrollbar rounded-2xl border border-edge/60">
         {/* дневная сетка + даты */}
         <div className="absolute inset-0 pointer-events-none">
           {gridDays.map((t) => (
-            <div key={t} className="absolute top-0 bottom-0 border-l border-slate-800/40" style={{ left: `${((t - minT) / (maxT - minT)) * 100}%` }}>
-              <span className="absolute top-1.5 left-1.5 text-[9px] font-bold text-slate-600 uppercase whitespace-nowrap">{fmtDay(t)}</span>
+            <div key={t} className="absolute top-0 bottom-0 border-l border-edge/40" style={{ left: `${((t - minT) / (maxT - minT)) * 100}%` }}>
+              <span className="absolute top-1.5 left-1.5 text-[9px] font-bold text-muted uppercase whitespace-nowrap">{fmtDay(t)}</span>
             </div>
           ))}
         </div>
@@ -85,10 +85,10 @@ export function TimelineView() {
         {/* дорожки по area */}
         <div className="relative pt-8">
           {lanes.map(([area, arr]) => (
-            <div key={area} className="relative border-b border-slate-800/40 py-3 min-h-[56px]">
+            <div key={area} className="relative border-b border-edge/40 py-3 min-h-[56px]">
               <div
                 className="sticky left-0 inline-block text-[9px] font-black uppercase tracking-[0.25em] px-2.5 py-1 rounded-md ml-2 mb-2 z-10"
-                style={{ color: AREA_COLORS[area] || '#94a3b8', backgroundColor: (AREA_COLORS[area] || '#94a3b8') + '15' }}
+                style={{ color: AREA_COLORS[area] || 'var(--text-secondary)', backgroundColor: alpha(AREA_COLORS[area] || 'var(--text-secondary)', 8) }}
               >
                 {area} · {arr.length}
               </div>

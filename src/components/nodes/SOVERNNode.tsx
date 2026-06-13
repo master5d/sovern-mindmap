@@ -1,43 +1,23 @@
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { Calendar, User, Zap } from 'lucide-react';
 import { SOVERNNodeData } from '../../types';
-
-const layerColors: Record<string, string> = {
-  human: '#ef4444', // red-500
-  boss: '#a855f7',  // purple-500
-  skills: '#3b82f6', // blue-500
-  coding: '#22c55e', // green-500
-  gateway: '#eab308', // yellow-500
-  memory: '#ec4899', // pink-500
-  tools: '#06b6d4',  // cyan-500
-  observability: '#f97316', // orange-500
-  hosting: '#6366f1', // indigo-500
-  projects: '#f43f5e', // rose-500
-  // mc_hub feedback areas
-  lms: '#10b981',     // emerald-500
-  blog: '#8b5cf6',    // violet-500
-  hub: '#0ea5e9',     // sky-500
-  mentor: '#d946ef',  // fuchsia-500
-  workers: '#f59e0b', // amber-500
-  course: '#84cc16',  // lime-500
-  infra: '#64748b',   // slate-500
-};
+import { layerColor } from '../../utils/feedback';
 
 export const SOVERNNode = ({ data, selected }: NodeProps<{ data: SOVERNNodeData } & any>) => {
-  const accentColor = layerColors[data.layer] || '#64748b';
-  
+  const accentColor = layerColor(data.layer);
+
   const displayStart = data.rollupDates?.start || data.dates?.start;
   const displayEnd = data.rollupDates?.end || data.dates?.end;
 
   return (
     <div
-      className={`px-4 py-3 shadow-2xl rounded-xl bg-slate-900 border-2 transition-all ${
-        selected ? 'ring-4 ring-blue-500/20 border-blue-500 scale-105' : 'border-slate-800 hover:border-slate-700'
+      className={`px-4 py-3 shadow-2xl rounded-xl bg-surface border-2 transition-all ${
+        selected ? 'ring-4 ring-accent/20 border-accent scale-105' : 'border-edge hover:border-edge-strong'
       }`}
       // severity-цвет тикета (mc_hub feedback) — левый стрип; ноды без data.color не затронуты
       style={data.color ? { borderLeftColor: data.color, borderLeftWidth: 4 } : undefined}
     >
-      <Handle type="target" position={Position.Top} className="w-3 h-3 !bg-slate-700 border-2 border-slate-900" />
+      <Handle type="target" position={Position.Top} className="w-3 h-3 !bg-edge-strong border-2 border-surface" />
 
       <div className="flex flex-col min-w-[180px] max-w-[240px]">
         {/* Header */}
@@ -46,16 +26,14 @@ export const SOVERNNode = ({ data, selected }: NodeProps<{ data: SOVERNNodeData 
             {data.layer}
           </span>
           <div
-            className={`w-2.5 h-2.5 rounded-full shadow-lg ${
-              data.status === 'active' ? 'bg-green-500 animate-pulse shadow-green-500/50' :
-              data.status === 'blocked' ? 'bg-red-500 shadow-red-500/50' : 'bg-slate-700'
-            }`}
+            className={`w-2.5 h-2.5 rounded-full shadow-lg ${data.status === 'active' ? 'animate-pulse' : ''}`}
+            style={{ backgroundColor: `var(--status-${data.status}, var(--status-idle))` }}
             title={`Status: ${data.status}`}
           />
         </div>
 
         {/* Title — clamp, иначе тикеты раздувают карту */}
-        <div className="font-bold text-sm text-slate-100 leading-tight line-clamp-3">
+        <div className="font-bold text-sm text-primary leading-tight line-clamp-3">
           {data.label}
         </div>
 
@@ -63,7 +41,7 @@ export const SOVERNNode = ({ data, selected }: NodeProps<{ data: SOVERNNodeData 
         <div className="grid grid-cols-1 gap-2 mt-3 empty:mt-0">
           {/* Tokens Budget — только если реально есть бюджет (0 — это шум) */}
           {((data.rollupBudget ?? data.budget ?? 0) > 0) && (
-            <div className="flex items-center text-[11px] text-slate-400 font-medium bg-slate-950/50 p-1.5 rounded-lg border border-slate-800">
+            <div className="flex items-center text-[11px] text-secondary font-medium bg-surface-2/50 p-1.5 rounded-lg border border-edge">
               <Zap size={12} className="mr-2 text-yellow-400 fill-yellow-400/20" />
               <span className="flex-1">Tokens:</span>
               <span className="font-bold text-yellow-400">
@@ -74,10 +52,10 @@ export const SOVERNNode = ({ data, selected }: NodeProps<{ data: SOVERNNodeData 
 
           {/* Dates */}
           {(displayStart || displayEnd) && (
-            <div className="flex items-center text-[11px] text-slate-400 font-medium bg-slate-950/50 p-1.5 rounded-lg border border-slate-800">
+            <div className="flex items-center text-[11px] text-secondary font-medium bg-surface-2/50 p-1.5 rounded-lg border border-edge">
               <Calendar size={12} className="mr-2 text-orange-400" />
               <span className="flex-1">Timeline:</span>
-              <span className="font-bold text-slate-200">
+              <span className="font-bold text-primary">
                 {displayStart || '?'} → {displayEnd || '?'}
               </span>
             </div>
@@ -85,7 +63,7 @@ export const SOVERNNode = ({ data, selected }: NodeProps<{ data: SOVERNNodeData 
 
           {/* Agent */}
           {data.agent && (
-            <div className="flex items-center text-[10px] text-slate-400 font-medium mt-1 pt-2 border-t border-slate-800">
+            <div className="flex items-center text-[10px] text-secondary font-medium mt-1 pt-2 border-t border-edge">
               <User size={12} className="mr-2 text-purple-400" />
               <span className="flex-1 italic text-[9px]">Assigned:</span>
               <span className="px-2 py-0.5 bg-purple-500/10 text-purple-400 rounded-md font-bold text-[9px] border border-purple-500/20">
@@ -96,7 +74,7 @@ export const SOVERNNode = ({ data, selected }: NodeProps<{ data: SOVERNNodeData 
         </div>
       </div>
 
-      <Handle type="source" position={Position.Bottom} className="w-3 h-3 !bg-slate-700 border-2 border-slate-900" />
+      <Handle type="source" position={Position.Bottom} className="w-3 h-3 !bg-edge-strong border-2 border-surface" />
     </div>
   );
 };

@@ -106,7 +106,7 @@ function Flow() {
   }, [viewMode, fitView]);
 
   return (
-    <div style={{ width: '100vw', height: '100vh', backgroundColor: '#020617', position: 'relative' }}>
+    <div style={{ width: '100vw', height: '100vh', backgroundColor: 'var(--bg-canvas)', position: 'relative' }}>
       <ReactFlow
         nodes={nodes}
         edges={viewMode === 'mindmap' ? edges : []}
@@ -119,7 +119,7 @@ function Flow() {
         colorMode={resolved}
       >
         <Background color={resolved === 'dark' ? '#1e293b' : '#cbd5e1'} variant={'dots' as any} gap={20} size={2} />
-        <Controls className="bg-slate-900/80 border-slate-800 fill-slate-100" />
+        <Controls className="bg-surface/80 border-edge fill-[var(--text-primary)]" />
       </ReactFlow>
 
       {/* DOM-вью поверх canvas (полностью перекрывают его); canvas — только mindmap */}
@@ -128,15 +128,15 @@ function Flow() {
       {viewMode === 'timeline' && <TimelineView />}
 
       {/* Header — вне ReactFlow, виден во всех режимах */}
-      <div className="absolute top-6 left-6 z-20 bg-slate-900/80 backdrop-blur-xl p-5 border border-slate-800 rounded-2xl shadow-2xl">
+      <div className="absolute top-6 left-6 z-20 bg-surface/80 backdrop-blur-xl p-5 border border-edge rounded-2xl shadow-2xl">
         <div className="flex items-center space-x-4">
           <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center relative">
             <div className="absolute inset-0 bg-blue-500 rounded-full animate-ping opacity-20" />
             <Zap size={12} className="text-white fill-white relative" />
           </div>
           <div>
-            <h1 className="text-base font-black uppercase tracking-tighter text-white leading-none">SOVERN <span className="text-blue-500">Control Plane</span></h1>
-            <div className="mt-1.5 text-[10px] text-slate-500 font-bold tracking-[0.2em] uppercase flex items-center">
+            <h1 className="text-base font-black uppercase tracking-tighter text-primary leading-none">SOVERN <span className="text-accent">Control Plane</span></h1>
+            <div className="mt-1.5 text-[10px] text-muted font-bold tracking-[0.2em] uppercase flex items-center">
               <span className={`w-1.5 h-1.5 rounded-full mr-2 ${isSyncing ? 'bg-orange-500 animate-spin' : 'bg-green-500'}`} />
               {viewMode.toUpperCase()} Active
             </div>
@@ -145,25 +145,25 @@ function Flow() {
       </div>
 
       {/* Toolbar — вне ReactFlow, виден во всех режимах */}
-      <div className="absolute bottom-6 right-6 z-20 bg-slate-900/90 backdrop-blur-md p-2.5 border border-slate-800 rounded-2xl shadow-2xl flex space-x-3 items-center">
+      <div className="absolute bottom-6 right-6 z-20 bg-surface/90 backdrop-blur-md p-2.5 border border-edge rounded-2xl shadow-2xl flex space-x-3 items-center">
         <ThemeSwitcher />
-        <div className="flex space-x-1.5 px-2 border-r border-slate-800">
+        <div className="flex space-x-1.5 px-2 border-r border-edge">
           {VIEW_BUTTONS.map(({ mode, Icon, active }) => (
             <button
               key={mode}
               onClick={() => setViewMode(mode)}
               title={mode}
-              className={`p-2.5 rounded-xl ${viewMode === mode ? active : 'text-slate-400 hover:bg-slate-800'}`}
+              className={`p-2.5 rounded-xl ${viewMode === mode ? active : 'text-secondary hover:bg-hover'}`}
             >
               <Icon size={18} />
             </button>
           ))}
         </div>
-        <div className="flex space-x-1.5 px-2 border-r border-slate-800">
-          <button onClick={loadFromFile} title="Load canvas" className="p-2.5 text-slate-400 hover:text-orange-400"><FolderOpen size={18} /></button>
-          <button onClick={saveToFile} title="Save canvas" className="p-2.5 text-slate-400 hover:text-blue-400"><Save size={18} /></button>
+        <div className="flex space-x-1.5 px-2 border-r border-edge">
+          <button onClick={loadFromFile} title="Load canvas" className="p-2.5 text-secondary hover:text-orange-400"><FolderOpen size={18} /></button>
+          <button onClick={saveToFile} title="Save canvas" className="p-2.5 text-secondary hover:text-accent"><Save size={18} /></button>
         </div>
-        <button onClick={recalculate} className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-slate-800 text-slate-400 hover:bg-white hover:text-slate-950 transition-all shadow-inner">
+        <button onClick={recalculate} className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-hover text-secondary hover:bg-primary hover:text-canvas transition-all shadow-inner">
           <RefreshCcw size={16} />
           <span className="text-[11px] font-black tracking-widest uppercase text-xs">Sync</span>
         </button>
