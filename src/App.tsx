@@ -75,8 +75,8 @@ function Flow() {
     nodes, edges, onNodesChange, onEdgesChange, onConnect,
     setNodes, setEdges, recalculate, selectedNodeId,
     viewMode, setViewMode, isSyncing,
+    diagramLayout, setDiagramLayout, presentationMode, setPresentationMode,
   } = useWorkflowStore();
-  const { diagramLayout, setDiagramLayout, presentationMode, setPresentationMode } = useWorkflowStore();
 
   const resolved = useThemeStore((s) => s.resolved);
   const { saveToFile, loadFromFile } = usePersistence();
