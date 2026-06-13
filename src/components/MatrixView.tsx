@@ -62,7 +62,7 @@ export function MatrixView() {
   }, [tickets]);
 
   return (
-    <div className="absolute inset-0 flex flex-col bg-canvas z-10 pt-44 pb-8 px-10">
+    <div data-export-root className="absolute inset-0 flex flex-col bg-canvas z-10 pt-44 pb-8 px-10">
       <div className="relative flex-1 min-h-0">
         {/* квадрантные фоны */}
         <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-px rounded-2xl overflow-hidden border border-edge-strong/60">

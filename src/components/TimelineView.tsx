@@ -64,14 +64,14 @@ export function TimelineView() {
 
   if (tickets.length === 0) {
     return (
-      <div className="absolute inset-0 flex items-center justify-center bg-canvas z-10">
+      <div data-export-root className="absolute inset-0 flex items-center justify-center bg-canvas z-10">
         <div className="text-muted text-xs uppercase tracking-widest font-bold">нет тикетов с датами</div>
       </div>
     );
   }
 
   return (
-    <div className="absolute inset-0 flex flex-col bg-canvas z-10 pt-44 pb-8 px-10">
+    <div data-export-root className="absolute inset-0 flex flex-col bg-canvas z-10 pt-44 pb-8 px-10">
       <div className="relative flex-1 min-h-0 overflow-y-auto custom-scrollbar rounded-2xl border border-edge/60">
         {/* дневная сетка + даты */}
         <div className="absolute inset-0 pointer-events-none">

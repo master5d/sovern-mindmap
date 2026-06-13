@@ -11,7 +11,7 @@ import {
   MarkerType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { RefreshCcw, Save, FolderOpen, Zap, Grid2X2, Network, CalendarRange, Columns2, Workflow, ListTree, Rows3, Eye, EyeOff } from 'lucide-react';
+import { RefreshCcw, Save, FolderOpen, Zap, Grid2X2, Network, CalendarRange, Columns2, Workflow, ListTree, Rows3, Eye, EyeOff, ImageDown } from 'lucide-react';
 
 import { ThemeSwitcher } from './components/ThemeSwitcher';
 import { TokenUpload } from './components/TokenUpload';
@@ -24,6 +24,7 @@ import { KanbanBoard } from './components/KanbanBoard';
 import { MatrixView } from './components/MatrixView';
 import { TimelineView } from './components/TimelineView';
 import { usePersistence } from './utils/persistence';
+import { exportCanvasPng, exportDomViewPng } from './utils/exportPng';
 import { SOVERNNodeData } from './types';
 
 const nodeTypes = {
@@ -89,6 +90,24 @@ function Flow() {
     setNotice(msg);
     window.clearTimeout(noticeTimer.current);
     noticeTimer.current = window.setTimeout(() => setNotice(null), 3500);
+  };
+
+  const [exporting, setExporting] = useState(false);
+  const onExport = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      if (viewMode === 'mindmap' || viewMode === 'diagram') {
+        await exportCanvasPng(nodes, viewMode);
+      } else {
+        await exportDomViewPng(viewMode);
+      }
+      notify('PNG exported');
+    } catch (err) {
+      notify(`⚠ export failed: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setExporting(false);
+    }
   };
 
   useBoardSync(
@@ -193,6 +212,7 @@ function Flow() {
           <div className="flex space-x-1.5 px-2 border-r border-edge">
             <button onClick={loadFromFile} title="Load canvas" className="p-2.5 text-secondary hover:text-orange-400"><FolderOpen size={18} /></button>
             <button onClick={saveToFile} title="Save canvas" className="p-2.5 text-secondary hover:text-accent"><Save size={18} /></button>
+            <button onClick={onExport} disabled={exporting} title="Export PNG" className="p-2.5 text-secondary hover:text-accent disabled:opacity-40"><ImageDown size={18} /></button>
           </div>
           <button onClick={recalculate} className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-hover text-secondary hover:bg-primary hover:text-canvas transition-all shadow-inner">
             <RefreshCcw size={16} />

@@ -143,7 +143,7 @@ export function KanbanBoard() {
   };
 
   return (
-    <div className="absolute inset-0 flex flex-col bg-canvas z-10">
+    <div data-export-root className="absolute inset-0 flex flex-col bg-canvas z-10">
       {/* toolbar */}
       {/* pl-[470px] — место под фиксированный header SOVERN Control Plane */}
       <div className="flex items-center gap-3 pl-[470px] pr-6 pt-8 pb-4 shrink-0 flex-wrap">
