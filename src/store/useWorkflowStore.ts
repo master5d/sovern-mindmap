@@ -11,9 +11,10 @@ import {
 } from '@xyflow/react';
 import { SOVERNNodeData } from '../types';
 import { calculateBudgetRollup, calculateTimelineRollup } from '../utils/pmEngine';
-import { getClusteredElements } from '../utils/layout';
+import { getClusteredElements, getTreeLayout, getLaneLayout } from '../utils/layout';
 
-export type ViewMode = 'mindmap' | 'matrix' | 'timeline' | 'kanban';
+export type ViewMode = 'mindmap' | 'diagram' | 'matrix' | 'timeline' | 'kanban';
+export type DiagramLayout = 'tree' | 'lanes';
 
 interface WorkflowState {
   nodes: Node<SOVERNNodeData>[];
@@ -29,7 +30,12 @@ interface WorkflowState {
   setEdges: (edges: Edge[]) => void;
   setSelectedNode: (id: string | null) => void;
   updateNodeData: (id: string, data: Partial<SOVERNNodeData>) => void;
+  diagramLayout: DiagramLayout;
+  presentationMode: boolean;
   setViewMode: (mode: ViewMode) => void;
+  setDiagramLayout: (layout: DiagramLayout) => void;
+  setPresentationMode: (on: boolean) => void;
+  applyDiagramLayout: () => void;
   setN8nWebhookUrl: (url: string) => void;
   recalculate: () => void;
   autoLayout: () => void;
@@ -41,6 +47,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   edges: [],
   selectedNodeId: null,
   viewMode: 'mindmap',
+  diagramLayout: 'tree',
+  presentationMode: false,
   n8nWebhookUrl: '',
   isSyncing: false,
   onNodesChange: (changes: NodeChange[]) => {
@@ -84,9 +92,29 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       get().triggerWebhook(id, 'node.status_changed');
     }
   },
+  setDiagramLayout: (layout) => {
+    set({ diagramLayout: layout });
+    get().applyDiagramLayout();
+  },
+  setPresentationMode: (on) => set({ presentationMode: on }),
+  applyDiagramLayout: () => {
+    const { nodes, edges, diagramLayout } = get();
+    const layoutFn = diagramLayout === 'tree' ? getTreeLayout : getLaneLayout;
+    const { nodes: laid } = layoutFn(nodes, edges);
+    set({ nodes: laid as any[] });
+  },
   setViewMode: (mode) => {
+    const prev = get().viewMode;
+    // уход из diagram: снять lane-ноды и вернуть draggable
+    if (prev === 'diagram' && mode !== 'diagram') {
+      set({
+        nodes: get().nodes.filter((n) => n.type !== 'lane').map((n) => ({ ...n, draggable: true })),
+        presentationMode: false,
+      });
+    }
     set({ viewMode: mode });
     if (mode === 'mindmap') get().autoLayout();
+    if (mode === 'diagram') get().applyDiagramLayout();
     // matrix / timeline / kanban — DOM-вью, canvas-позиции не трогаем
   },
   setN8nWebhookUrl: (url) => set({ n8nWebhookUrl: url }),
@@ -99,7 +127,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   },
   autoLayout: () => {
     const { nodes, edges } = get();
-    const { nodes: layoutedNodes, edges: layoutedEdges } = getClusteredElements(nodes, edges);
+    const content = nodes.filter((n) => n.type !== 'lane');
+    const { nodes: layoutedNodes, edges: layoutedEdges } = getClusteredElements(content, edges);
     set({ nodes: layoutedNodes as any[], edges: layoutedEdges });
   },
   triggerWebhook: (nodeId, _eventType) => {

@@ -8,9 +8,10 @@ The **SOVERN MindMap Control Plane** is a high-performance orchestration tool de
 
 ## 🚀 Key Features
 
-### 1. Multimodal Visualization (The 4 Views)
-Switch seamlessly between four analytical dimensions. The MindMap is a React Flow canvas; Matrix, Timeline and Kanban are dedicated DOM views layered on top:
+### 1. Multimodal Visualization (The 5 Views)
+Switch seamlessly between five analytical dimensions. The MindMap and Diagram are React Flow canvases; Matrix, Timeline and Kanban are dedicated DOM views layered on top:
 *   **🕸️ MindMap Mode:** Hierarchical canvas. Feedback boards get a **cluster layout** (area columns with card grids); generic graphs fall back to Dagre auto-layout.
+*   **🧭 Diagram Mode:** Strict org-chart tree or dependency swimlanes (one lane per layer), orthogonal edges with arrows, plus a read-only **presentation mode** for demos and exports.
 *   **📊 Priority Matrix (2x2):** Eisenhower quadrants (*Do First / Schedule / Quick Wins / Backlog*) with tinted backgrounds. Tickets render as compact chips positioned by **Impact × Urgency** (1-10); same-cell tickets stack with a "+N" expander.
 *   **📅 Timeline:** Area lanes over a real time axis (ticket `created` date), day gridlines, greedy stacking on overlap.
 *   **📋 Kanban Board:** *Triage / Pending / Active / Done / Blocked* columns with counts, search, area filters and **drag-and-drop** — dropping a card persists the status change back to `feedback.jsonl` via the dev-server API (`POST /api/feedback/status` → `fb.mjs`).
@@ -24,7 +25,8 @@ Switch seamlessly between four analytical dimensions. The MindMap is a React Flo
 ### 3. Sovereign Infrastructure
 *   **Local-First & Obsidian Ready:** Native support for the `.canvas` format. Your "Control Plane" and "Second Brain" share a single source of truth.
 *   **mc_hub Feedback Bridge:** Dev server serves `/board.canvas` from the mc_hub triage pipeline (path via `SOVERN_BOARD` env), polls it every 3s, and writes status changes back through `fb.mjs` — the board is a live two-way window into `feedback.jsonl`.
-*   **Cyberpunk Aesthetics:** High-contrast Dark Mode with neon accents, animated data flows, and glassmorphism UI.
+*   **🎨 Theming:** Dark (cyberpunk neon) / Light (clean professional) / System modes with persistence. Upload **W3C Design Tokens JSON** (Figma / Style Dictionary export) to re-skin the entire app — colors live in CSS custom properties.
+*   **🖼️ PNG Export:** One click exports the full graph (fit-to-content) in canvas views or a snapshot of Kanban/Matrix/Timeline.
 
 ---
 
@@ -32,9 +34,10 @@ Switch seamlessly between four analytical dimensions. The MindMap is a React Flo
 
 *   **Core:** [Tauri 2.0](https://tauri.app/) (Secure Rust Bridge)
 *   **UI:** [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) + [Vite 7](https://vitejs.dev/)
-*   **Styling:** [Tailwind CSS v4](https://tailwindcss.com/)
+*   **Styling:** [Tailwind CSS v4](https://tailwindcss.com/) + CSS Custom Properties theming
 *   **Graph Logic:** [@xyflow/react](https://reactflow.dev/) + [Dagre](https://github.com/dagrejs/dagre) (Auto-layout)
 *   **State:** [Zustand](https://zustand-demo.pmnd.rs/)
+*   **Tests:** [Vitest](https://vitest.dev/)
 
 ---
 

@@ -1,7 +1,18 @@
 // Общая палитра/семантика feedback-тикетов mc_hub (kanban / matrix / timeline).
+// Все цвета — CSS-переменные из src/theme/tokens.css: смена темы и загруженные
+// design-токены перекрашивают вью без правок кода.
+
+/** color + альфа без hex-конкатенации — работает и с var(--…). pct: 0..100. */
+export const alpha = (color: string, pct: number) =>
+  `color-mix(in srgb, ${color} ${pct}%, transparent)`;
+
+/** Акцент слоя/области; незнакомый layer падает на infra-серый. */
+export const layerColor = (layer: string) => `var(--layer-${layer}, var(--layer-infra))`;
+
 export const AREA_COLORS: Record<string, string> = {
-  lms: '#10b981', blog: '#8b5cf6', hub: '#0ea5e9', mentor: '#d946ef',
-  workers: '#f59e0b', course: '#84cc16', infra: '#64748b',
+  lms: 'var(--layer-lms)', blog: 'var(--layer-blog)', hub: 'var(--layer-hub)',
+  mentor: 'var(--layer-mentor)', workers: 'var(--layer-workers)',
+  course: 'var(--layer-course)', infra: 'var(--layer-infra)',
 };
 
 export const CATEGORY_EMOJI: Record<string, string> = {
@@ -9,15 +20,17 @@ export const CATEGORY_EMOJI: Record<string, string> = {
 };
 
 export const STATUS_COLORS: Record<string, string> = {
-  idle: '#64748b', pending: '#eab308', active: '#3b82f6', done: '#22c55e', blocked: '#ef4444',
+  idle: 'var(--status-idle)', pending: 'var(--status-pending)',
+  active: 'var(--status-active)', done: 'var(--status-done)',
+  blocked: 'var(--status-blocked)',
 };
 
 // Priority Matrix quadrant — те же пороги, что в /triage skill
 export const quadrant = (impact = 5, urgency = 5) => {
-  if (impact >= 6 && urgency >= 6) return { label: 'Do First', color: '#ef4444' };
-  if (impact >= 6) return { label: 'Schedule', color: '#3b82f6' };
-  if (urgency >= 6) return { label: 'Quick', color: '#eab308' };
-  return { label: 'Backlog', color: '#64748b' };
+  if (impact >= 6 && urgency >= 6) return { label: 'Do First', color: 'var(--q-dofirst)' };
+  if (impact >= 6) return { label: 'Schedule', color: 'var(--q-schedule)' };
+  if (urgency >= 6) return { label: 'Quick', color: 'var(--q-quick)' };
+  return { label: 'Backlog', color: 'var(--q-backlog)' };
 };
 
 /** Заголовок без category-emoji-префикса (он рендерится отдельно). */

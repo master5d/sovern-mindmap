@@ -2,6 +2,11 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./index.css";
+import { initTheme } from "./store/useThemeStore";
+import { initCustomTokens } from "./theme/customTokens";
+
+initTheme();
+initCustomTokens();
 
 console.log("[SOVERN] main.tsx: Initializing React...");
 

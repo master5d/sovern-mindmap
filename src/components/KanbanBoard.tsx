@@ -3,32 +3,16 @@ import { Search, Inbox, Clock3, PlayCircle, CheckCircle2, Ban, AlertTriangle } f
 import { useWorkflowStore } from '../store/useWorkflowStore';
 import { NodeStatus, SOVERNNodeData } from '../types';
 import { Node } from '@xyflow/react';
+import { AREA_COLORS, CATEGORY_EMOJI, quadrant, alpha, stripEmoji } from '../utils/feedback';
 
 // ── конфиг колонок ────────────────────────────────────────────────────────────
 const COLUMNS: { status: NodeStatus; title: string; accent: string; Icon: typeof Inbox }[] = [
-  { status: 'idle', title: 'Triage', accent: '#64748b', Icon: Inbox },
-  { status: 'pending', title: 'Pending', accent: '#eab308', Icon: Clock3 },
-  { status: 'active', title: 'Active', accent: '#3b82f6', Icon: PlayCircle },
-  { status: 'done', title: 'Done', accent: '#22c55e', Icon: CheckCircle2 },
-  { status: 'blocked', title: 'Blocked', accent: '#ef4444', Icon: Ban },
+  { status: 'idle', title: 'Triage', accent: 'var(--status-idle)', Icon: Inbox },
+  { status: 'pending', title: 'Pending', accent: 'var(--status-pending)', Icon: Clock3 },
+  { status: 'active', title: 'Active', accent: 'var(--status-active)', Icon: PlayCircle },
+  { status: 'done', title: 'Done', accent: 'var(--status-done)', Icon: CheckCircle2 },
+  { status: 'blocked', title: 'Blocked', accent: 'var(--status-blocked)', Icon: Ban },
 ];
-
-const AREA_COLORS: Record<string, string> = {
-  lms: '#10b981', blog: '#8b5cf6', hub: '#0ea5e9', mentor: '#d946ef',
-  workers: '#f59e0b', course: '#84cc16', infra: '#64748b',
-};
-
-const CATEGORY_EMOJI: Record<string, string> = {
-  bug: '🐛', feature: '✨', ux: '🎨', question: '❓', idea: '💡',
-};
-
-// Priority Matrix quadrant — те же пороги, что в /triage skill
-const quadrant = (impact = 5, urgency = 5) => {
-  if (impact >= 6 && urgency >= 6) return { label: 'Do First', color: '#ef4444' };
-  if (impact >= 6) return { label: 'Schedule', color: '#3b82f6' };
-  if (urgency >= 6) return { label: 'Quick', color: '#eab308' };
-  return { label: 'Backlog', color: '#64748b' };
-};
 
 type TicketNode = Node<SOVERNNodeData>;
 
@@ -47,31 +31,35 @@ function KanbanCard({ node, onDragStart }: { node: TicketNode; onDragStart: (e: 
       draggable
       onDragStart={(e) => onDragStart(e, node.id)}
       onClick={() => setSelectedNode(node.id)}
-      className={`group cursor-grab active:cursor-grabbing select-none rounded-xl bg-slate-900 border transition-all p-3 pl-3.5 relative overflow-hidden hover:border-slate-600 hover:translate-y-[-1px] hover:shadow-lg hover:shadow-black/40 ${
-        selected ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-slate-800'
+      className={`group cursor-grab active:cursor-grabbing select-none rounded-xl bg-surface border transition-all p-3 pl-3.5 relative overflow-hidden hover:border-edge-strong hover:translate-y-[-1px] hover:shadow-lg ${
+        selected ? 'border-accent ring-2 ring-accent/20' : 'border-edge'
       }`}
     >
       {/* severity strip */}
-      <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: node.data.color || '#334155' }} />
+      <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: node.data.color || 'var(--border-strong)' }} />
 
-      <div className="text-[12px] leading-snug text-slate-200 font-medium mb-2.5">
-        {CATEGORY_EMOJI[fb?.category] ?? ''} {String(node.data.label).replace(/^[🐛✨🎨❓💡]\s*/u, '')}
+      <div className="text-[12px] leading-snug text-primary font-medium mb-2.5">
+        {CATEGORY_EMOJI[fb?.category] ?? ''} {stripEmoji(node.data.label)}
       </div>
 
       <div className="flex items-center gap-1.5 flex-wrap">
         <span
           className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border"
-          style={{ color: AREA_COLORS[area] || '#94a3b8', borderColor: (AREA_COLORS[area] || '#94a3b8') + '40', backgroundColor: (AREA_COLORS[area] || '#94a3b8') + '15' }}
+          style={{
+            color: AREA_COLORS[area] || 'var(--text-secondary)',
+            borderColor: alpha(AREA_COLORS[area] || 'var(--text-secondary)', 25),
+            backgroundColor: alpha(AREA_COLORS[area] || 'var(--text-secondary)', 8),
+          }}
         >
           {area}
         </span>
         <span
           className="text-[9px] font-bold px-1.5 py-0.5 rounded-md"
-          style={{ color: q.color, backgroundColor: q.color + '18' }}
+          style={{ color: q.color, backgroundColor: alpha(q.color, 9) }}
         >
           {q.label}
         </span>
-        <span className="ml-auto text-[9px] font-mono text-slate-500" title={`impact ${impact} × urgency ${urgency}`}>
+        <span className="ml-auto text-[9px] font-mono text-muted" title={`impact ${impact} × urgency ${urgency}`}>
           I{impact}·U{urgency}
         </span>
       </div>
@@ -155,17 +143,17 @@ export function KanbanBoard() {
   };
 
   return (
-    <div className="absolute inset-0 flex flex-col bg-[#020617] z-10">
+    <div data-export-root className="absolute inset-0 flex flex-col bg-canvas z-10">
       {/* toolbar */}
       {/* pl-[470px] — место под фиксированный header SOVERN Control Plane */}
       <div className="flex items-center gap-3 pl-[470px] pr-6 pt-8 pb-4 shrink-0 flex-wrap">
         <div className="relative">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" />
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search tickets…"
-            className="bg-slate-900 border border-slate-800 rounded-xl pl-8 pr-3 py-2 text-xs text-slate-200 w-64 focus:outline-none focus:border-blue-500 placeholder:text-slate-600"
+            className="bg-surface border border-edge rounded-xl pl-8 pr-3 py-2 text-xs text-primary w-64 focus:outline-none focus:border-accent placeholder:text-muted"
           />
         </div>
         <div className="flex gap-1.5">
@@ -174,11 +162,11 @@ export function KanbanBoard() {
               key={a}
               onClick={() => setAreaFilter(areaFilter === a ? null : a)}
               className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-lg border transition-colors ${
-                areaFilter === a ? 'text-white' : 'text-slate-500 border-slate-800 hover:border-slate-600'
+                areaFilter === a ? 'text-white' : 'text-muted border-edge hover:border-edge-strong'
               }`}
               style={
                 areaFilter === a
-                  ? { backgroundColor: (AREA_COLORS[a] || '#475569') + '30', borderColor: AREA_COLORS[a] || '#475569', color: AREA_COLORS[a] }
+                  ? { backgroundColor: alpha(AREA_COLORS[a] || 'var(--layer-infra)', 19), borderColor: AREA_COLORS[a] || 'var(--layer-infra)', color: AREA_COLORS[a] }
                   : undefined
               }
             >
@@ -186,7 +174,7 @@ export function KanbanBoard() {
             </button>
           ))}
         </div>
-        <div className="ml-auto text-[10px] font-bold text-slate-600 uppercase tracking-widest">
+        <div className="ml-auto text-[10px] font-bold text-muted uppercase tracking-widest">
           {visible.length} / {tickets.length} tickets
         </div>
       </div>
@@ -200,15 +188,15 @@ export function KanbanBoard() {
             onDragLeave={() => setDragOver((d) => (d === status ? null : d))}
             onDrop={(e) => onDrop(e, status)}
             className={`flex flex-col w-[280px] shrink-0 rounded-2xl border transition-colors ${
-              dragOver === status ? 'border-blue-500/60 bg-blue-500/5' : 'border-slate-800/60 bg-slate-900/30'
+              dragOver === status ? 'border-accent/60 bg-accent/5' : 'border-edge/60 bg-surface/30'
             }`}
           >
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-800/60 shrink-0">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-edge/60 shrink-0">
               <Icon size={14} style={{ color: accent }} />
-              <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-300">{title}</span>
+              <span className="text-[11px] font-black uppercase tracking-[0.2em] text-secondary">{title}</span>
               <span
                 className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full"
-                style={{ color: accent, backgroundColor: accent + '18' }}
+                style={{ color: accent, backgroundColor: alpha(accent, 9) }}
               >
                 {byStatus[status].length}
               </span>
@@ -218,7 +206,7 @@ export function KanbanBoard() {
                 <KanbanCard key={node.id} node={node} onDragStart={onDragStart} />
               ))}
               {byStatus[status].length === 0 && (
-                <div className="text-center text-[10px] text-slate-700 uppercase tracking-widest pt-8 font-bold">empty</div>
+                <div className="text-center text-[10px] text-muted uppercase tracking-widest pt-8 font-bold">empty</div>
               )}
             </div>
           </div>
@@ -227,7 +215,7 @@ export function KanbanBoard() {
 
       {/* toast */}
       {toast && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 border border-slate-700 text-slate-200 text-xs px-4 py-2.5 rounded-xl shadow-2xl z-50">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-hover border border-edge-strong text-primary text-xs px-4 py-2.5 rounded-xl shadow-2xl z-50">
           {toast}
         </div>
       )}

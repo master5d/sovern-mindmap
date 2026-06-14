@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.0.0-alpha.3] - 2026-06-11
+
+### 🚀 Added
+- **Theming:** Dark / Light / System modes with persistence, built on a semantic CSS-variable layer.
+- **Design Tokens:** Upload **W3C Design Tokens JSON** (Figma / Style Dictionary) to override theme colors; one-click reset to default.
+- **Diagram View:** Fifth view mode — strict org-chart **tree** and dependency **swimlanes** (one lane per layer), orthogonal arrowed edges, plus a read-only **presentation mode**.
+- **PNG Export:** Full-graph fit-to-content export for canvas views (MindMap / Diagram) and snapshot export for DOM views (Kanban / Matrix / Timeline), in both Tauri and browser.
+- **Tests:** Vitest infrastructure with unit coverage for the theme store, palette helpers, token parser, and diagram layouts.
+
+### 🛠️ Fixed
+- **Dagre Layout:** Graph instance is now created per call instead of a module singleton — no more stale node/edge accumulation across layouts.
+
 ## [v1.0.0-alpha.2] - 2026-05-07
 
 ### 🚀 Added
