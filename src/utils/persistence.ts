@@ -64,5 +64,43 @@ export const usePersistence = () => {
     }
   };
 
-  return { saveToFile, loadFromFile };
+  const WORKSPACE_KEY = 'sovern-workspace';
+
+  const saveWorkspace = async () => {
+    const canvasData = toJSONCanvas(nodes.filter((n) => n.type !== 'lane'), edges);
+    const json = JSON.stringify(canvasData, null, 2);
+    if (!isTauri()) {
+      try { localStorage.setItem(WORKSPACE_KEY, json); } catch { /* quota — ignore */ }
+      return;
+    }
+    const { appDataDir, join } = await import('@tauri-apps/api/path');
+    const { writeTextFile, mkdir } = await import('@tauri-apps/plugin-fs');
+    const dir = await appDataDir();
+    await mkdir(dir, { recursive: true }).catch(() => {});
+    await writeTextFile(await join(dir, 'workspace.canvas'), json);
+  };
+
+  const loadWorkspace = async () => {
+    let json: string | null = null;
+    if (!isTauri()) {
+      json = localStorage.getItem(WORKSPACE_KEY);
+    } else {
+      const { appDataDir, join } = await import('@tauri-apps/api/path');
+      const { readTextFile, exists } = await import('@tauri-apps/plugin-fs');
+      const path = await join(await appDataDir(), 'workspace.canvas');
+      if (await exists(path)) json = await readTextFile(path);
+    }
+    if (!json) return false;
+    try {
+      const { nodes: ln, edges: le } = fromJSONCanvas(JSON.parse(json));
+      setNodes(ln);
+      setEdges(le);
+      return true;
+    } catch (error) {
+      console.error('Failed to load workspace:', error);
+      return false;
+    }
+  };
+
+  return { saveToFile, loadFromFile, saveWorkspace, loadWorkspace };
 };

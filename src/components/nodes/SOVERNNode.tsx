@@ -1,13 +1,31 @@
 import { Handle, Position, NodeProps } from '@xyflow/react';
-import { Calendar, User, Zap } from 'lucide-react';
+import { Calendar, User, Zap, ChevronRight, ChevronDown } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { SOVERNNodeData } from '../../types';
 import { layerColor } from '../../utils/feedback';
+import { useWorkflowStore } from '../../store/useWorkflowStore';
+import { getChildren, getDescendants } from '../../utils/tree';
 
-export const SOVERNNode = ({ data, selected }: NodeProps<{ data: SOVERNNodeData } & any>) => {
+export const SOVERNNode = ({ id, data, selected }: NodeProps<{ data: SOVERNNodeData } & any>) => {
   const accentColor = layerColor(data.layer);
 
   const displayStart = data.rollupDates?.start || data.dates?.start;
   const displayEnd = data.rollupDates?.end || data.dates?.end;
+
+  const editing = useWorkflowStore((s) => s.editingNodeId === id);
+  const commit = useWorkflowStore((s) => s.commitInlineEdit);
+  const cancel = useWorkflowStore((s) => s.cancelInlineEdit);
+  const [draft, setDraft] = useState(data.label);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const collapsed = useWorkflowStore((s) => s.collapsedIds.includes(id));
+  const edges = useWorkflowStore((s) => s.edges);
+  const toggleCollapse = useWorkflowStore((s) => s.toggleCollapse);
+  const hasChildren = getChildren(id, edges).length > 0;
+  const descCount = collapsed ? getDescendants(id, edges).length : 0;
+  useEffect(() => {
+    if (editing) { setDraft(data.label); inputRef.current?.focus(); inputRef.current?.select(); }
+  }, [editing, data.label]);
 
   return (
     <div
@@ -22,6 +40,15 @@ export const SOVERNNode = ({ data, selected }: NodeProps<{ data: SOVERNNodeData 
       <div className="flex flex-col min-w-[180px] max-w-[240px]">
         {/* Header */}
         <div className="flex items-center justify-between mb-2">
+          {hasChildren && (
+            <button
+              className="nodrag nopan mr-1 text-muted hover:text-primary"
+              onClick={(e) => { e.stopPropagation(); toggleCollapse(id); }}
+              title={collapsed ? 'Expand' : 'Collapse'}
+            >
+              {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+            </button>
+          )}
           <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: accentColor }}>
             {data.layer}
           </span>
@@ -33,9 +60,34 @@ export const SOVERNNode = ({ data, selected }: NodeProps<{ data: SOVERNNodeData 
         </div>
 
         {/* Title — clamp, иначе тикеты раздувают карту */}
-        <div className="font-bold text-sm text-primary leading-tight line-clamp-3">
-          {data.label}
-        </div>
+        {editing ? (
+          <textarea
+            ref={inputRef}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={() => commit(id, draft)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commit(id, draft); }
+              else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+              e.stopPropagation();
+            }}
+            className="nodrag nopan font-bold text-sm text-primary leading-tight bg-surface-2 border border-accent rounded-md p-1 w-full resize-none outline-none"
+            rows={2}
+          />
+        ) : (
+          <div
+            className="font-bold text-sm text-primary leading-tight line-clamp-3 cursor-text"
+            onDoubleClick={() => useWorkflowStore.getState().beginInlineEdit(id)}
+          >
+            {data.label}
+          </div>
+        )}
+
+        {collapsed && descCount > 0 && (
+          <span className="mt-1 inline-block w-fit text-[10px] font-bold text-muted bg-surface-2 px-2 py-0.5 rounded-full border border-edge">
+            +{descCount} hidden
+          </span>
+        )}
 
         {/* Meta Grid */}
         <div className="grid grid-cols-1 gap-2 mt-3 empty:mt-0">

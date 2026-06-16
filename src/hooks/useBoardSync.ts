@@ -29,6 +29,12 @@ export const useBoardSync = (
         if (!res.ok) throw new Error(String(res.status));
         const text = await res.text();
         if (!alive) return;
+        // view-first: пока пользователь редактирует руками, не перетираем граф.
+        // lastText НЕ обновляем — изменение переподхватится после exitEditMode.
+        if (useWorkflowStore.getState().isEditing) {
+          if (first) onFirstLoadRef.current(true);
+          return; // finally{} перепланирует следующий tick
+        }
         if (text !== lastText.current) {
           lastText.current = text;
           const { nodes, edges } = fromJSONCanvas(JSON.parse(text));
