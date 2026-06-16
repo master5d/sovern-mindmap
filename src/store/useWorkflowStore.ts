@@ -114,6 +114,8 @@ export const useWorkflowStore = create<WorkflowState>()(
       }
     });
     if (nextSelectedId !== get().selectedNodeId) set({ selectedNodeId: nextSelectedId });
+    // A real user drag is a structural edit — freeze the live poll so it isn't clobbered.
+    if (changes.some((c) => c.type === 'position' && (c as any).dragging)) get().enterEditMode();
     set({ nodes: applyNodeChanges(changes, get().nodes) as any[] });
   },
   onEdgesChange: (changes: EdgeChange[]) => {
@@ -175,6 +177,7 @@ export const useWorkflowStore = create<WorkflowState>()(
       nodes: get().nodes.filter((n) => !doomed.has(n.id)),
       edges: get().edges.filter((e) => !doomed.has(e.source) && !doomed.has(e.target)),
       selectedNodeId: get().selectedNodeId && doomed.has(get().selectedNodeId!) ? null : get().selectedNodeId,
+      collapsedIds: get().collapsedIds.filter((cid) => !doomed.has(cid)),
     });
     withoutHistory(() => get().recalculate());
   },

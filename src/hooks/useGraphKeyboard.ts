@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
 import { useWorkflowStore } from '../store/useWorkflowStore';
 
-/** True when focus is in a text field / contentEditable — keyboard authoring must defer. */
-const isTextTarget = (el: Element | null): boolean => {
+/** True when focus is on an interactive control (input / button / link / select / contentEditable) — keyboard authoring must defer. */
+const isInteractiveTarget = (el: Element | null): boolean => {
   if (!(el instanceof HTMLElement)) return false;
   const tag = el.tagName;
-  return tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON' || tag === 'A' || el.isContentEditable;
 };
 
 /** Tab=child, Enter=sibling, F2=rename, Delete=remove, Esc=clear/cancel. Canvas views only. */
@@ -14,7 +14,7 @@ export function useGraphKeyboard(enabled: boolean) {
     if (!enabled) return;
     const onKey = (e: KeyboardEvent) => {
       const s = useWorkflowStore.getState();
-      if (isTextTarget(document.activeElement)) return;
+      if (isInteractiveTarget(document.activeElement)) return;
       const id = s.selectedNodeId;
 
       const mod = e.ctrlKey || e.metaKey;

@@ -81,3 +81,22 @@ describe('inline editing state', () => {
     expect(useWorkflowStore.getState().nodes.find((n) => n.id === 'child')!.data.label).toBe('child');
   });
 });
+
+describe('drag enters edit mode', () => {
+  beforeEach(seed);
+
+  it('a user position-drag flips isEditing true', () => {
+    expect(useWorkflowStore.getState().isEditing).toBe(false);
+    useWorkflowStore.getState().onNodesChange([
+      { id: 'child', type: 'position', position: { x: 5, y: 5 }, dragging: true } as any,
+    ]);
+    expect(useWorkflowStore.getState().isEditing).toBe(true);
+  });
+
+  it('a non-drag change does not enter edit mode', () => {
+    useWorkflowStore.getState().onNodesChange([
+      { id: 'child', type: 'select', selected: true } as any,
+    ]);
+    expect(useWorkflowStore.getState().isEditing).toBe(false);
+  });
+});

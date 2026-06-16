@@ -28,4 +28,11 @@ describe('fold', () => {
     const visible = selectVisibleNodes(useWorkflowStore.getState());
     expect(visible.every((n) => !n.hidden)).toBe(true);
   });
+
+  it('deleting a collapsed node prunes it from collapsedIds', () => {
+    useWorkflowStore.getState().toggleCollapse('b');
+    expect(useWorkflowStore.getState().collapsedIds).toContain('b');
+    useWorkflowStore.getState().deleteNodeCascade('b');
+    expect(useWorkflowStore.getState().collapsedIds).not.toContain('b');
+  });
 });
