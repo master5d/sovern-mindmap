@@ -23,6 +23,9 @@ interface WorkflowState {
   viewMode: ViewMode;
   n8nWebhookUrl: string;
   isSyncing: boolean;
+  isEditing: boolean;
+  enterEditMode: () => void;
+  exitEditMode: () => void;
   onNodesChange: (changes: NodeChange[]) => void;
   onEdgesChange: (changes: EdgeChange[]) => void;
   onConnect: (connection: Connection) => void;
@@ -51,6 +54,12 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   presentationMode: false,
   n8nWebhookUrl: '',
   isSyncing: false,
+  isEditing: false,
+  enterEditMode: () => {
+    if (get().isEditing) return;
+    set({ isEditing: true });
+  },
+  exitEditMode: () => set({ isEditing: false }),
   onNodesChange: (changes: NodeChange[]) => {
     let nextSelectedId = get().selectedNodeId;
     changes.forEach((change) => {

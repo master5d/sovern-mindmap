@@ -20,6 +20,7 @@ import { useWorkflowStore, ViewMode } from './store/useWorkflowStore';
 import { SOVERNNode } from './components/nodes/SOVERNNode';
 import { LaneNode } from './components/nodes/LaneNode';
 import { NodeSidebar } from './components/NodeSidebar';
+import { EditModeBanner } from './components/EditModeBanner';
 import { KanbanBoard } from './components/KanbanBoard';
 import { MatrixView } from './components/MatrixView';
 import { TimelineView } from './components/TimelineView';
@@ -83,6 +84,8 @@ function Flow() {
   const { saveToFile, loadFromFile } = usePersistence();
   const { fitView } = useReactFlow();
   const initialized = useRef(false);
+
+  const [saveState] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   const [notice, setNotice] = useState<string | null>(null);
   const noticeTimer = useRef<number | undefined>(undefined);
@@ -153,6 +156,7 @@ function Flow() {
 
   return (
     <div style={{ width: '100vw', height: '100vh', backgroundColor: 'var(--bg-canvas)', position: 'relative' }}>
+      <EditModeBanner saveState={saveState} />
       <ReactFlow
         nodes={nodes}
         edges={displayEdges}
