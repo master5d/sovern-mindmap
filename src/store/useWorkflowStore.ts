@@ -101,7 +101,7 @@ export const useWorkflowStore = create<WorkflowState>()(
     useWorkflowStore.temporal.getState().resume();
   },
   exitEditMode: () => {
-    set({ isEditing: false });
+    set({ isEditing: false, editingNodeId: null });
     useWorkflowStore.temporal.getState().pause();
     useWorkflowStore.temporal.getState().clear();
   },

@@ -91,10 +91,15 @@ export const usePersistence = () => {
       if (await exists(path)) json = await readTextFile(path);
     }
     if (!json) return false;
-    const { nodes: ln, edges: le } = fromJSONCanvas(JSON.parse(json));
-    setNodes(ln);
-    setEdges(le);
-    return true;
+    try {
+      const { nodes: ln, edges: le } = fromJSONCanvas(JSON.parse(json));
+      setNodes(ln);
+      setEdges(le);
+      return true;
+    } catch (error) {
+      console.error('Failed to load workspace:', error);
+      return false;
+    }
   };
 
   return { saveToFile, loadFromFile, saveWorkspace, loadWorkspace };

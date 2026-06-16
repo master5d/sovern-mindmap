@@ -1,9 +1,11 @@
 import { Check, Pencil } from 'lucide-react';
 import { useWorkflowStore } from '../store/useWorkflowStore';
+import { usePersistence } from '../utils/persistence';
 
 export function EditModeBanner({ saveState }: { saveState: 'idle' | 'saving' | 'saved' }) {
   const isEditing = useWorkflowStore((s) => s.isEditing);
   const exitEditMode = useWorkflowStore((s) => s.exitEditMode);
+  const { saveWorkspace } = usePersistence();
   if (!isEditing) return null;
 
   return (
@@ -15,7 +17,7 @@ export function EditModeBanner({ saveState }: { saveState: 'idle' | 'saving' | '
         {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved ✓' : ''}
       </span>
       <button
-        onClick={exitEditMode}
+        onClick={async () => { await saveWorkspace(); exitEditMode(); }}
         className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-accent text-white text-xs font-bold hover:opacity-90"
       >
         <Check size={14} /> Done
