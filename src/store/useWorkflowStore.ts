@@ -14,7 +14,7 @@ import {
 import { SOVERNNodeData } from '../types';
 import { calculateBudgetRollup, calculateTimelineRollup } from '../utils/pmEngine';
 import { getClusteredElements, getTreeLayout, getLaneLayout } from '../utils/layout';
-import { getDescendants, getParent } from '../utils/tree';
+import { getDescendants, getParent, cloneSubtree } from '../utils/tree';
 
 export type ViewMode = 'mindmap' | 'diagram' | 'matrix' | 'timeline' | 'kanban';
 export type DiagramLayout = 'tree' | 'lanes';
@@ -55,6 +55,9 @@ interface WorkflowState {
   triggerWebhook: (nodeId: string, eventType: string) => void;
   collapsedIds: string[];
   toggleCollapse: (id: string) => void;
+  clipboard: { nodes: Node<SOVERNNodeData>[]; edges: Edge[]; rootId: string } | null;
+  copySubtree: (id: string) => void;
+  pasteSubtree: (targetParentId?: string) => void;
 }
 
 /**
@@ -233,6 +236,28 @@ export const useWorkflowStore = create<WorkflowState>()(
     const set0 = new Set(get().collapsedIds);
     set0.has(id) ? set0.delete(id) : set0.add(id);
     set({ collapsedIds: [...set0] });
+  },
+  clipboard: null,
+  copySubtree: (id) => {
+    const { nodes, edges, rootId } = cloneSubtree(id, get().nodes, get().edges);
+    set({ clipboard: { nodes: nodes as any, edges, rootId } });
+  },
+  pasteSubtree: (targetParentId) => {
+    const clip = get().clipboard;
+    if (!clip) return;
+    get().enterEditMode();
+    const seed = { nodes: [...clip.nodes], edges: [...clip.edges], rootId: clip.rootId };
+    const linkEdge = targetParentId
+      ? [{ id: `e-${targetParentId}-${seed.rootId}`, source: targetParentId, target: seed.rootId }]
+      : [];
+    set({
+      nodes: [...get().nodes, ...seed.nodes],
+      edges: [...get().edges, ...seed.edges, ...linkEdge],
+      selectedNodeId: seed.rootId,
+    });
+    // refresh clipboard with new ids so a subsequent paste won't collide
+    get().copySubtree(seed.rootId);
+    get().autoLayout();
   },
     }),
     {

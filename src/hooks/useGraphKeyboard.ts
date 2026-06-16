@@ -29,6 +29,16 @@ export function useGraphKeyboard(enabled: boolean) {
         return;
       }
 
+      if (mod && e.key.toLowerCase() === 'c' && id && !isTextTarget(document.activeElement)) {
+        s.copySubtree(id);
+        return;
+      }
+      if (mod && e.key.toLowerCase() === 'v') {
+        e.preventDefault();
+        s.pasteSubtree(id ?? undefined);
+        return;
+      }
+
       if (e.key === 'Tab' && id) {
         e.preventDefault();
         s.beginInlineEdit(s.addChildNode(id));
