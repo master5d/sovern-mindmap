@@ -17,6 +17,7 @@ import { ThemeSwitcher } from './components/ThemeSwitcher';
 import { TokenUpload } from './components/TokenUpload';
 import { useThemeStore } from './store/useThemeStore';
 import { useWorkflowStore, ViewMode } from './store/useWorkflowStore';
+import { selectVisibleNodes, selectVisibleEdges } from './store/useWorkflowStore';
 import { SOVERNNode } from './components/nodes/SOVERNNode';
 import { LaneNode } from './components/nodes/LaneNode';
 import { NodeSidebar } from './components/NodeSidebar';
@@ -157,12 +158,16 @@ function Flow() {
         }))
       : edges;
 
+  const collapsedIds = useWorkflowStore((s) => s.collapsedIds);
+  const visibleNodes = selectVisibleNodes({ nodes, edges, collapsedIds });
+  const visibleDisplayEdges = selectVisibleEdges({ nodes, edges: displayEdges, collapsedIds });
+
   return (
     <div style={{ width: '100vw', height: '100vh', backgroundColor: 'var(--bg-canvas)', position: 'relative' }}>
       <EditModeBanner saveState={saveState} />
       <ReactFlow
-        nodes={nodes}
-        edges={displayEdges}
+        nodes={visibleNodes}
+        edges={visibleDisplayEdges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}

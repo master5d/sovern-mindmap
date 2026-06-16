@@ -1,9 +1,10 @@
 import { Handle, Position, NodeProps } from '@xyflow/react';
-import { Calendar, User, Zap } from 'lucide-react';
+import { Calendar, User, Zap, ChevronRight, ChevronDown } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { SOVERNNodeData } from '../../types';
 import { layerColor } from '../../utils/feedback';
 import { useWorkflowStore } from '../../store/useWorkflowStore';
+import { getChildren, getDescendants } from '../../utils/tree';
 
 export const SOVERNNode = ({ id, data, selected }: NodeProps<{ data: SOVERNNodeData } & any>) => {
   const accentColor = layerColor(data.layer);
@@ -16,6 +17,12 @@ export const SOVERNNode = ({ id, data, selected }: NodeProps<{ data: SOVERNNodeD
   const cancel = useWorkflowStore((s) => s.cancelInlineEdit);
   const [draft, setDraft] = useState(data.label);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const collapsed = useWorkflowStore((s) => s.collapsedIds.includes(id));
+  const edges = useWorkflowStore((s) => s.edges);
+  const toggleCollapse = useWorkflowStore((s) => s.toggleCollapse);
+  const hasChildren = getChildren(id, edges).length > 0;
+  const descCount = collapsed ? getDescendants(id, edges).length : 0;
   useEffect(() => {
     if (editing) { setDraft(data.label); inputRef.current?.focus(); inputRef.current?.select(); }
   }, [editing, data.label]);
@@ -33,6 +40,15 @@ export const SOVERNNode = ({ id, data, selected }: NodeProps<{ data: SOVERNNodeD
       <div className="flex flex-col min-w-[180px] max-w-[240px]">
         {/* Header */}
         <div className="flex items-center justify-between mb-2">
+          {hasChildren && (
+            <button
+              className="nodrag nopan mr-1 text-muted hover:text-primary"
+              onClick={(e) => { e.stopPropagation(); toggleCollapse(id); }}
+              title={collapsed ? 'Expand' : 'Collapse'}
+            >
+              {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+            </button>
+          )}
           <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: accentColor }}>
             {data.layer}
           </span>
@@ -65,6 +81,12 @@ export const SOVERNNode = ({ id, data, selected }: NodeProps<{ data: SOVERNNodeD
           >
             {data.label}
           </div>
+        )}
+
+        {collapsed && descCount > 0 && (
+          <span className="mt-1 inline-block w-fit text-[10px] font-bold text-muted bg-surface-2 px-2 py-0.5 rounded-full border border-edge">
+            +{descCount} hidden
+          </span>
         )}
 
         {/* Meta Grid */}

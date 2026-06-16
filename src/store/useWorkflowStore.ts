@@ -53,6 +53,8 @@ interface WorkflowState {
   recalculate: () => void;
   autoLayout: () => void;
   triggerWebhook: (nodeId: string, eventType: string) => void;
+  collapsedIds: string[];
+  toggleCollapse: (id: string) => void;
 }
 
 /**
@@ -225,7 +227,13 @@ export const useWorkflowStore = create<WorkflowState>()(
     if (!node) return;
     set({ isSyncing: true });
     setTimeout(() => { set({ isSyncing: false }); }, 1500);
-  }
+  },
+  collapsedIds: [],
+  toggleCollapse: (id) => {
+    const set0 = new Set(get().collapsedIds);
+    set0.has(id) ? set0.delete(id) : set0.add(id);
+    set({ collapsedIds: [...set0] });
+  },
     }),
     {
       partialize: (s) => ({ nodes: s.nodes, edges: s.edges }),
@@ -239,3 +247,21 @@ export const useWorkflowStore = create<WorkflowState>()(
 
 // History is meaningful only during hand-editing; stay paused until enterEditMode.
 useWorkflowStore.temporal.getState().pause();
+
+/** Nodes with `hidden` set for every descendant of a collapsed node. */
+export function selectVisibleNodes(s: { nodes: any[]; edges: any[]; collapsedIds: string[] }) {
+  if (s.collapsedIds.length === 0) return s.nodes;
+  const hidden = new Set<string>();
+  s.collapsedIds.forEach((id) => getDescendants(id, s.edges as Edge[]).forEach((d) => hidden.add(d)));
+  return s.nodes.map((n) => (hidden.has(n.id) ? { ...n, hidden: true } : n.hidden ? { ...n, hidden: false } : n));
+}
+
+/** Edges hidden when either endpoint is hidden. */
+export function selectVisibleEdges(s: { nodes: any[]; edges: any[]; collapsedIds: string[] }) {
+  if (s.collapsedIds.length === 0) return s.edges;
+  const hidden = new Set<string>();
+  s.collapsedIds.forEach((id) => getDescendants(id, s.edges as Edge[]).forEach((d) => hidden.add(d)));
+  return s.edges.map((e) =>
+    hidden.has(e.source) || hidden.has(e.target) ? { ...e, hidden: true } : e.hidden ? { ...e, hidden: false } : e,
+  );
+}
