@@ -26,7 +26,7 @@ export function useGraphKeyboard(enabled: boolean) {
       } else if (e.key === 'F2' && id) {
         e.preventDefault();
         s.beginInlineEdit(id);
-      } else if ((e.key === 'Delete' || e.key === 'Backspace') && id) {
+      } else if (e.key === 'Delete' && id) {
         e.preventDefault();
         const hasChildren = s.edges.some((edge) => edge.source === id);
         if (!hasChildren || window.confirm('Delete this node and all its children?')) {
