@@ -63,17 +63,17 @@ interface WorkflowState {
  * tracking state (history stays paused outside edit sessions).
  */
 function withoutHistory(fn: () => void): void {
-  const temporal = useWorkflowStore?.temporal;
-  if (!temporal) {
+  const temporalStore = useWorkflowStore?.temporal;
+  if (!temporalStore) {
     fn();
     return;
   }
-  const wasTracking = temporal.getState().isTracking;
-  if (wasTracking) temporal.getState().pause();
+  const wasTracking = temporalStore.getState().isTracking;
+  if (wasTracking) temporalStore.getState().pause();
   try {
     fn();
   } finally {
-    if (wasTracking) temporal.getState().resume();
+    if (wasTracking) temporalStore.getState().resume();
   }
 }
 
@@ -230,6 +230,8 @@ export const useWorkflowStore = create<WorkflowState>()(
     {
       partialize: (s) => ({ nodes: s.nodes, edges: s.edges }),
       limit: 100,
+      // Shallow ref-compare: requires immutable updates upstream — an in-place
+      // node/edge mutation defeats tracking and silently produces no undo step.
       equality: (a, b) => shallow(a.nodes, b.nodes) && shallow(a.edges, b.edges),
     },
   ),
