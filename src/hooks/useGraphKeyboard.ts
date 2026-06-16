@@ -17,6 +17,18 @@ export function useGraphKeyboard(enabled: boolean) {
       if (isTextTarget(document.activeElement)) return;
       const id = s.selectedNodeId;
 
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        useWorkflowStore.temporal.getState().undo();
+        return;
+      }
+      if (mod && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        useWorkflowStore.temporal.getState().redo();
+        return;
+      }
+
       if (e.key === 'Tab' && id) {
         e.preventDefault();
         s.beginInlineEdit(s.addChildNode(id));

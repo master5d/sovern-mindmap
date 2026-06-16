@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { temporal } from 'zundo';
+import { shallow } from 'zustand/shallow';
 import {
   Connection,
   Edge,
@@ -53,7 +55,31 @@ interface WorkflowState {
   triggerWebhook: (nodeId: string, eventType: string) => void;
 }
 
-export const useWorkflowStore = create<WorkflowState>((set, get) => ({
+/**
+ * Run a derived mutation (layout / rollup re-computation) without it landing as
+ * its own undo step. A single logical edit (add/delete/rename) issues one primary
+ * `set` plus follow-up re-layout `set`s; we coalesce by pausing temporal tracking
+ * around the follow-ups so one Ctrl+Z reverses the whole edit. Restores the prior
+ * tracking state (history stays paused outside edit sessions).
+ */
+function withoutHistory(fn: () => void): void {
+  const temporal = useWorkflowStore?.temporal;
+  if (!temporal) {
+    fn();
+    return;
+  }
+  const wasTracking = temporal.getState().isTracking;
+  if (wasTracking) temporal.getState().pause();
+  try {
+    fn();
+  } finally {
+    if (wasTracking) temporal.getState().resume();
+  }
+}
+
+export const useWorkflowStore = create<WorkflowState>()(
+  temporal(
+    (set, get) => ({
   nodes: [],
   edges: [],
   selectedNodeId: null,
@@ -66,8 +92,14 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   enterEditMode: () => {
     if (get().isEditing) return;
     set({ isEditing: true });
+    useWorkflowStore.temporal.getState().clear();
+    useWorkflowStore.temporal.getState().resume();
   },
-  exitEditMode: () => set({ isEditing: false }),
+  exitEditMode: () => {
+    set({ isEditing: false });
+    useWorkflowStore.temporal.getState().pause();
+    useWorkflowStore.temporal.getState().clear();
+  },
   onNodesChange: (changes: NodeChange[]) => {
     let nextSelectedId = get().selectedNodeId;
     changes.forEach((change) => {
@@ -103,7 +135,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         node.id === id ? { ...node, data: { ...node.data, ...dataUpdate } } : node
       ),
     });
-    get().recalculate();
+    withoutHistory(() => get().recalculate());
 
     if (dataUpdate.status) {
       get().triggerWebhook(id, 'node.status_changed');
@@ -124,7 +156,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       edges: [...get().edges, { id: `e-${parentId}-${id}`, source: parentId, target: id }],
       selectedNodeId: id,
     });
-    get().autoLayout();
+    withoutHistory(() => get().autoLayout());
     return id;
   },
   addSiblingNode: (nodeId) => {
@@ -139,7 +171,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       edges: get().edges.filter((e) => !doomed.has(e.source) && !doomed.has(e.target)),
       selectedNodeId: get().selectedNodeId && doomed.has(get().selectedNodeId!) ? null : get().selectedNodeId,
     });
-    get().recalculate();
+    withoutHistory(() => get().recalculate());
   },
   editingNodeId: null,
   beginInlineEdit: (id) => { get().enterEditMode(); set({ editingNodeId: id, selectedNodeId: id }); },
@@ -194,4 +226,14 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     set({ isSyncing: true });
     setTimeout(() => { set({ isSyncing: false }); }, 1500);
   }
-}));
+    }),
+    {
+      partialize: (s) => ({ nodes: s.nodes, edges: s.edges }),
+      limit: 100,
+      equality: (a, b) => shallow(a.nodes, b.nodes) && shallow(a.edges, b.edges),
+    },
+  ),
+);
+
+// History is meaningful only during hand-editing; stay paused until enterEditMode.
+useWorkflowStore.temporal.getState().pause();
