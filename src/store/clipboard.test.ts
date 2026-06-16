@@ -33,4 +33,16 @@ describe('copy/paste subtree', () => {
     // 'a' now has an extra child (the cloned 'b' root)
     expect(getChildren('a', edges).length).toBe(2);
   });
+
+  it('a paste is a single undo step', () => {
+    useWorkflowStore.temporal.getState().clear();
+    useWorkflowStore.temporal.getState().resume();
+    const before = useWorkflowStore.getState().nodes.length;
+    useWorkflowStore.getState().copySubtree('b');
+    useWorkflowStore.getState().pasteSubtree('a');
+    expect(useWorkflowStore.getState().nodes.length).toBe(before + 2);
+    useWorkflowStore.temporal.getState().undo();
+    expect(useWorkflowStore.getState().nodes.length).toBe(before);
+    useWorkflowStore.temporal.getState().pause();
+  });
 });

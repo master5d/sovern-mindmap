@@ -257,7 +257,7 @@ export const useWorkflowStore = create<WorkflowState>()(
     });
     // refresh clipboard with new ids so a subsequent paste won't collide
     get().copySubtree(seed.rootId);
-    get().autoLayout();
+    withoutHistory(() => get().autoLayout());
   },
     }),
     {

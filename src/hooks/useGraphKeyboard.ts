@@ -29,7 +29,7 @@ export function useGraphKeyboard(enabled: boolean) {
         return;
       }
 
-      if (mod && e.key.toLowerCase() === 'c' && id && !isTextTarget(document.activeElement)) {
+      if (mod && e.key.toLowerCase() === 'c' && id) {
         s.copySubtree(id);
         return;
       }
