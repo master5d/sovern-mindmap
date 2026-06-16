@@ -12,6 +12,7 @@ import {
 import { SOVERNNodeData } from '../types';
 import { calculateBudgetRollup, calculateTimelineRollup } from '../utils/pmEngine';
 import { getClusteredElements, getTreeLayout, getLaneLayout } from '../utils/layout';
+import { getDescendants, getParent } from '../utils/tree';
 
 export type ViewMode = 'mindmap' | 'diagram' | 'matrix' | 'timeline' | 'kanban';
 export type DiagramLayout = 'tree' | 'lanes';
@@ -33,6 +34,9 @@ interface WorkflowState {
   setEdges: (edges: Edge[]) => void;
   setSelectedNode: (id: string | null) => void;
   updateNodeData: (id: string, data: Partial<SOVERNNodeData>) => void;
+  addChildNode: (parentId: string) => string;
+  addSiblingNode: (nodeId: string) => string;
+  deleteNodeCascade: (nodeId: string) => void;
   diagramLayout: DiagramLayout;
   presentationMode: boolean;
   setViewMode: (mode: ViewMode) => void;
@@ -100,6 +104,38 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     if (dataUpdate.status) {
       get().triggerWebhook(id, 'node.status_changed');
     }
+  },
+  addChildNode: (parentId) => {
+    get().enterEditMode();
+    const id = `n-${crypto.randomUUID()}`;
+    const parent = get().nodes.find((n) => n.id === parentId);
+    const newNode = {
+      id,
+      type: 'sovern' as const,
+      position: { x: (parent?.position.x ?? 0), y: (parent?.position.y ?? 0) + 120 },
+      data: { label: 'New node', layer: parent?.data.layer ?? 'projects', status: 'pending' as const },
+    };
+    set({
+      nodes: [...get().nodes, newNode as any],
+      edges: [...get().edges, { id: `e-${parentId}-${id}`, source: parentId, target: id }],
+      selectedNodeId: id,
+    });
+    get().autoLayout();
+    return id;
+  },
+  addSiblingNode: (nodeId) => {
+    const parentId = getParent(nodeId, get().edges);
+    return get().addChildNode(parentId ?? nodeId);
+  },
+  deleteNodeCascade: (nodeId) => {
+    get().enterEditMode();
+    const doomed = new Set([nodeId, ...getDescendants(nodeId, get().edges)]);
+    set({
+      nodes: get().nodes.filter((n) => !doomed.has(n.id)),
+      edges: get().edges.filter((e) => !doomed.has(e.source) && !doomed.has(e.target)),
+      selectedNodeId: get().selectedNodeId && doomed.has(get().selectedNodeId!) ? null : get().selectedNodeId,
+    });
+    get().recalculate();
   },
   setDiagramLayout: (layout) => {
     set({ diagramLayout: layout });
