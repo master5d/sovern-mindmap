@@ -26,6 +26,7 @@ import { MatrixView } from './components/MatrixView';
 import { TimelineView } from './components/TimelineView';
 import { usePersistence } from './utils/persistence';
 import { exportCanvasPng, exportDomViewPng } from './utils/exportPng';
+import { useGraphKeyboard } from './hooks/useGraphKeyboard';
 import { SOVERNNodeData } from './types';
 
 const nodeTypes = {
@@ -143,6 +144,7 @@ function Flow() {
   }, [viewMode, diagramLayout, fitView]);
 
   const isCanvasView = viewMode === 'mindmap' || viewMode === 'diagram';
+  useGraphKeyboard(isCanvasView);
   const displayEdges = !isCanvasView
     ? []
     : viewMode === 'diagram'

@@ -1,13 +1,24 @@
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { Calendar, User, Zap } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { SOVERNNodeData } from '../../types';
 import { layerColor } from '../../utils/feedback';
+import { useWorkflowStore } from '../../store/useWorkflowStore';
 
-export const SOVERNNode = ({ data, selected }: NodeProps<{ data: SOVERNNodeData } & any>) => {
+export const SOVERNNode = ({ id, data, selected }: NodeProps<{ data: SOVERNNodeData } & any>) => {
   const accentColor = layerColor(data.layer);
 
   const displayStart = data.rollupDates?.start || data.dates?.start;
   const displayEnd = data.rollupDates?.end || data.dates?.end;
+
+  const editing = useWorkflowStore((s) => s.editingNodeId === id);
+  const commit = useWorkflowStore((s) => s.commitInlineEdit);
+  const cancel = useWorkflowStore((s) => s.cancelInlineEdit);
+  const [draft, setDraft] = useState(data.label);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    if (editing) { setDraft(data.label); inputRef.current?.focus(); inputRef.current?.select(); }
+  }, [editing, data.label]);
 
   return (
     <div
@@ -33,9 +44,28 @@ export const SOVERNNode = ({ data, selected }: NodeProps<{ data: SOVERNNodeData 
         </div>
 
         {/* Title — clamp, иначе тикеты раздувают карту */}
-        <div className="font-bold text-sm text-primary leading-tight line-clamp-3">
-          {data.label}
-        </div>
+        {editing ? (
+          <textarea
+            ref={inputRef}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={() => commit(id, draft)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commit(id, draft); }
+              else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+              e.stopPropagation();
+            }}
+            className="nodrag nopan font-bold text-sm text-primary leading-tight bg-surface-2 border border-accent rounded-md p-1 w-full resize-none outline-none"
+            rows={2}
+          />
+        ) : (
+          <div
+            className="font-bold text-sm text-primary leading-tight line-clamp-3 cursor-text"
+            onDoubleClick={() => useWorkflowStore.getState().beginInlineEdit(id)}
+          >
+            {data.label}
+          </div>
+        )}
 
         {/* Meta Grid */}
         <div className="grid grid-cols-1 gap-2 mt-3 empty:mt-0">

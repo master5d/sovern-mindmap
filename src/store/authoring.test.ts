@@ -62,3 +62,22 @@ describe('authoring actions', () => {
     expect(getDescendants('root', edges)).not.toContain('child');
   });
 });
+
+describe('inline editing state', () => {
+  beforeEach(seed);
+
+  it('beginInlineEdit sets editingNodeId; commit updates label and clears it', () => {
+    useWorkflowStore.getState().beginInlineEdit('child');
+    expect(useWorkflowStore.getState().editingNodeId).toBe('child');
+    useWorkflowStore.getState().commitInlineEdit('child', 'renamed');
+    expect(useWorkflowStore.getState().nodes.find((n) => n.id === 'child')!.data.label).toBe('renamed');
+    expect(useWorkflowStore.getState().editingNodeId).toBeNull();
+  });
+
+  it('cancelInlineEdit clears editingNodeId without changing label', () => {
+    useWorkflowStore.getState().beginInlineEdit('child');
+    useWorkflowStore.getState().cancelInlineEdit();
+    expect(useWorkflowStore.getState().editingNodeId).toBeNull();
+    expect(useWorkflowStore.getState().nodes.find((n) => n.id === 'child')!.data.label).toBe('child');
+  });
+});

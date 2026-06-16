@@ -37,6 +37,10 @@ interface WorkflowState {
   addChildNode: (parentId: string) => string;
   addSiblingNode: (nodeId: string) => string;
   deleteNodeCascade: (nodeId: string) => void;
+  editingNodeId: string | null;
+  beginInlineEdit: (id: string) => void;
+  commitInlineEdit: (id: string, label: string) => void;
+  cancelInlineEdit: () => void;
   diagramLayout: DiagramLayout;
   presentationMode: boolean;
   setViewMode: (mode: ViewMode) => void;
@@ -137,6 +141,14 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     });
     get().recalculate();
   },
+  editingNodeId: null,
+  beginInlineEdit: (id) => { get().enterEditMode(); set({ editingNodeId: id, selectedNodeId: id }); },
+  commitInlineEdit: (id, label) => {
+    const trimmed = label.trim();
+    if (trimmed) get().updateNodeData(id, { label: trimmed });
+    set({ editingNodeId: null });
+  },
+  cancelInlineEdit: () => set({ editingNodeId: null }),
   setDiagramLayout: (layout) => {
     set({ diagramLayout: layout });
     get().applyDiagramLayout();
