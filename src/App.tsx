@@ -11,7 +11,7 @@ import {
   MarkerType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { RefreshCcw, Save, FolderOpen, Zap, Grid2X2, Network, CalendarRange, Columns2, Workflow, ListTree, Rows3, Eye, EyeOff, ImageDown } from 'lucide-react';
+import { RefreshCcw, Save, FolderOpen, History, Zap, Grid2X2, Network, CalendarRange, Columns2, Workflow, ListTree, Rows3, Eye, EyeOff, ImageDown } from 'lucide-react';
 
 import { ThemeSwitcher } from './components/ThemeSwitcher';
 import { TokenUpload } from './components/TokenUpload';
@@ -25,6 +25,7 @@ import { KanbanBoard } from './components/KanbanBoard';
 import { MatrixView } from './components/MatrixView';
 import { TimelineView } from './components/TimelineView';
 import { usePersistence } from './utils/persistence';
+import { useAutosave } from './hooks/useAutosave';
 import { exportCanvasPng, exportDomViewPng } from './utils/exportPng';
 import { useGraphKeyboard } from './hooks/useGraphKeyboard';
 import { SOVERNNodeData } from './types';
@@ -82,11 +83,11 @@ function Flow() {
   } = useWorkflowStore();
 
   const resolved = useThemeStore((s) => s.resolved);
-  const { saveToFile, loadFromFile } = usePersistence();
+  const { saveToFile, loadFromFile, loadWorkspace } = usePersistence();
   const { fitView } = useReactFlow();
   const initialized = useRef(false);
 
-  const [saveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const saveState = useAutosave();
 
   const [notice, setNotice] = useState<string | null>(null);
   const noticeTimer = useRef<number | undefined>(undefined);
@@ -218,6 +219,7 @@ function Flow() {
           </div>
           <div className="flex space-x-1.5 px-2 border-r border-edge">
             <button onClick={loadFromFile} title="Load canvas" className="p-2.5 text-secondary hover:text-orange-400"><FolderOpen size={18} /></button>
+            <button onClick={loadWorkspace} title="Open my workspace" className="p-2.5 text-secondary hover:text-orange-400"><History size={18} /></button>
             <button onClick={saveToFile} title="Save canvas" className="p-2.5 text-secondary hover:text-accent"><Save size={18} /></button>
             <button onClick={onExport} disabled={exporting} title="Export PNG" className="p-2.5 text-secondary hover:text-accent disabled:opacity-40"><ImageDown size={18} /></button>
           </div>
