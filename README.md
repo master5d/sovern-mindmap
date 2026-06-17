@@ -28,6 +28,19 @@ Switch seamlessly between five analytical dimensions. The MindMap and Diagram ar
 *   **🎨 Theming:** Dark (cyberpunk neon) / Light (clean professional) / System modes with persistence. Upload **W3C Design Tokens JSON** (Figma / Style Dictionary export) to re-skin the entire app — colors live in CSS custom properties.
 *   **🖼️ PNG Export:** One click exports the full graph (fit-to-content) in canvas views or a snapshot of Kanban/Matrix/Timeline.
 
+### 4. Hand Editing (Edit Mode)
+The app boots as a **viewer** of the live board; the first hand-edit enters **Edit Mode**, which freezes the 3s poll so your edits aren't clobbered (a banner shows the paused state; *Done* flushes a final save and resumes the live board).
+*   **⌨️ Keyboard authoring:** `Tab` = child, `Enter` = sibling, `F2` / double-click = rename, `Delete` = cascade-delete, `Esc` = clear.
+*   **↩️ Undo / Redo:** `Ctrl+Z` / `Ctrl+Y` (zundo) — one step per structural edit; React-Flow churn never pollutes history.
+*   **✏️ Inline editing** on the node itself, **fold/collapse** subtrees (+N badge), and **copy/paste** subtree (`Ctrl+C` / `Ctrl+V`, fresh ids).
+*   **💾 Autosave** to a *separate workspace file* (Tauri app-data / browser `localStorage`) — **never** writes `board.canvas`.
+
+### 5. AI Canvas (prompt → diagram)
+Describe a diagram in the prompt bar and an **editable** one appears on the same canvas — no separate tool windows. *Tools are invisible backends; the canvas is the single surface.*
+*   **🪄 Generation:** prompt → LiteLLM gateway (dev-proxied at `/llm`; the key is injected **server-side** and never reaches the client bundle) → output normalized/repaired by `extractCanvas` → native **JSON Canvas** interchange (not Mermaid) → appended as **one undoable** Edit-Mode edit with dagre layout.
+*   **🔷 12 shapes:** rectangle · rounded · decision · terminal · note · cylinder (datastore) · ellipse · parallelogram (I/O) · hexagon · cloud (service) · actor (user) · document — one `SHAPE_KINDS` source of truth, rendered via the `shapeGeometry` registry.
+*   Needs the LiteLLM gateway running (canonical port in `NAUTILUS/config/services.json`; the proxy defaults to `:4001`, override with `SOVERN_LLM_GATEWAY`).
+
 ---
 
 ## 🛠️ Tech Stack
