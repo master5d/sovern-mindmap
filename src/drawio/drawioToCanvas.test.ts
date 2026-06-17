@@ -41,4 +41,28 @@ describe('drawioToCanvas', () => {
   it('throws DrawioParseError when there is no <mxGraphModel>', () => {
     expect(() => drawioToCanvas('<foo/>')).toThrow(DrawioParseError);
   });
+
+  it('does not import an edge-label child cell as a phantom node', () => {
+    const model = `<mxGraphModel><root>
+      <mxCell id="0"/><mxCell id="1" parent="0"/>
+      <mxCell id="2" value="A" vertex="1" parent="1"><mxGeometry x="0" y="0" width="80" height="40" as="geometry"/></mxCell>
+      <mxCell id="3" value="B" vertex="1" parent="1"><mxGeometry x="200" y="0" width="80" height="40" as="geometry"/></mxCell>
+      <mxCell id="4" edge="1" parent="1" source="2" target="3"/>
+      <mxCell id="5" value="yes" vertex="1" connectable="0" parent="4"><mxGeometry relative="1" as="geometry"/></mxCell>
+    </root></mxGraphModel>`;
+    const c = drawioToCanvas(model);
+    expect(c.nodes.map((n) => n.id).sort()).toEqual(['2', '3']); // no '5'
+  });
+
+  it('drops a group wrapper and gives its child absolute coordinates', () => {
+    const model = `<mxGraphModel><root>
+      <mxCell id="0"/><mxCell id="1" parent="0"/>
+      <mxCell id="g" style="group" vertex="1" parent="1"><mxGeometry x="100" y="200" width="300" height="300" as="geometry"/></mxCell>
+      <mxCell id="c" value="Child" style="rounded=1;" vertex="1" parent="g"><mxGeometry x="10" y="20" width="120" height="60" as="geometry"/></mxCell>
+    </root></mxGraphModel>`;
+    const c = drawioToCanvas(model);
+    expect(c.nodes.map((n) => n.id)).toEqual(['c']);  // group 'g' dropped
+    const child = c.nodes[0];
+    expect([child.x, child.y]).toEqual([110, 220]);   // 100+10, 200+20 — absolute
+  });
 });
