@@ -24,6 +24,12 @@ Schema:
 - document = a document, file, or report
 - ellipse = an event or state
 
+Optionally, to make the diagram a guided walkthrough, add to a node's "metadata":
+- "mm:step": a 1-based integer giving the order in which this node should be revealed
+- "mm:note": one short sentence explaining this node, shown when it is the current step
+Add these to ALL nodes or NONE. When present, order the steps so the story builds up
+logically (start → details). When omitted, the app reveals nodes in graph order.
+
 Use short ids ("n1","n2"...). Connect nodes with edges by id. Positions can be 0 — they will be auto-laid-out.
 
 Example for "user signs up; data saved to a database; a confirmation email is sent via a queue":
