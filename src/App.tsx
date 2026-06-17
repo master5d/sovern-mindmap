@@ -11,7 +11,7 @@ import {
   MarkerType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { RefreshCcw, Save, FolderOpen, History, Zap, Grid2X2, Network, CalendarRange, Columns2, Workflow, ListTree, Rows3, Eye, EyeOff, ImageDown, GraduationCap } from 'lucide-react';
+import { RefreshCcw, Save, FolderOpen, History, Zap, Grid2X2, Network, CalendarRange, Columns2, Workflow, ListTree, Rows3, Eye, EyeOff, ImageDown, GraduationCap, Code2 } from 'lucide-react';
 
 import { ThemeSwitcher } from './components/ThemeSwitcher';
 import { TokenUpload } from './components/TokenUpload';
@@ -32,6 +32,7 @@ import { TimelineView } from './components/TimelineView';
 import { usePersistence } from './utils/persistence';
 import { useAutosave } from './hooks/useAutosave';
 import { exportCanvasPng, exportDomViewPng } from './utils/exportPng';
+import { exportHtml } from './export/exportHtml';
 import { useGraphKeyboard } from './hooks/useGraphKeyboard';
 import { SOVERNNodeData } from './types';
 
@@ -124,6 +125,17 @@ function Flow() {
       notify(`⚠ export failed: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setExporting(false);
+    }
+  };
+
+  const [exportingHtml, setExportingHtml] = useState(false);
+  const onExportHtml = async () => {
+    if (exportingHtml) return;
+    setExportingHtml(true);
+    try {
+      await exportHtml(nodes.filter((n) => n.type !== 'lane'), { notify });
+    } finally {
+      setExportingHtml(false);
     }
   };
 
@@ -274,6 +286,9 @@ function Flow() {
             <DrawioImportButton notify={notify} />
             <button onClick={saveToFile} title="Save canvas" className="p-2.5 text-secondary hover:text-accent"><Save size={18} /></button>
             <button onClick={onExport} disabled={exporting} title="Export PNG" className="p-2.5 text-secondary hover:text-accent disabled:opacity-40"><ImageDown size={18} /></button>
+            {isCanvasView && (
+              <button onClick={onExportHtml} disabled={exportingHtml} title="Export HTML" className="p-2.5 text-secondary hover:text-accent disabled:opacity-40"><Code2 size={18} /></button>
+            )}
           </div>
           <button onClick={recalculate} className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-hover text-secondary hover:bg-primary hover:text-canvas transition-all shadow-inner">
             <RefreshCcw size={16} />
