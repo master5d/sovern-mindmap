@@ -20,6 +20,7 @@ import { useWorkflowStore, ViewMode } from './store/useWorkflowStore';
 import { selectVisibleNodes, selectVisibleEdges } from './store/useWorkflowStore';
 import { SOVERNNode } from './components/nodes/SOVERNNode';
 import { LaneNode } from './components/nodes/LaneNode';
+import { ShapeNode } from './components/nodes/ShapeNode';
 import { NodeSidebar } from './components/NodeSidebar';
 import { EditModeBanner } from './components/EditModeBanner';
 import { KanbanBoard } from './components/KanbanBoard';
@@ -34,6 +35,7 @@ import { SOVERNNodeData } from './types';
 const nodeTypes = {
   sovern: SOVERNNode,
   lane: LaneNode,
+  shape: ShapeNode,
 };
 
 const prdNodes: Node<SOVERNNodeData>[] = [
