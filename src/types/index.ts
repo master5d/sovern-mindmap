@@ -25,6 +25,12 @@ export type SOVERNLayer =
 
 export type NodeStatus = 'pending' | 'active' | 'done' | 'blocked' | 'idle';
 
+export const SHAPE_KINDS = [
+  'rectangle', 'rounded', 'decision', 'terminal', 'note',
+  'cylinder', 'ellipse', 'parallelogram', 'hexagon', 'cloud', 'actor', 'document',
+] as const;
+export type ShapeKind = (typeof SHAPE_KINDS)[number];
+
 export interface SOVERNNodeData {
   label: string;
   layer: SOVERNLayer;
@@ -44,7 +50,7 @@ export interface SOVERNNodeData {
   urgency?: number;  // 1-10, Priority Matrix X
   created?: string;  // ISO-дата создания тикета (timeline)
   color?: string;    // severity-цвет тикета из canvas (hex)
-  shape?: 'rectangle' | 'rounded' | 'decision' | 'terminal' | 'note';
+  shape?: ShapeKind;
   feedback?: Record<string, any>; // полный triage-блок mc_hub тикета
   [key: string]: any; // sovern:* metadata
 }
