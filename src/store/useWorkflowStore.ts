@@ -116,7 +116,10 @@ export const useWorkflowStore = create<WorkflowState>()(
     if (nextSelectedId !== get().selectedNodeId) set({ selectedNodeId: nextSelectedId });
     // A real user drag is a structural edit — freeze the live poll so it isn't clobbered.
     if (changes.some((c) => c.type === 'position' && (c as any).dragging)) get().enterEditMode();
-    set({ nodes: applyNodeChanges(changes, get().nodes) as any[] });
+    // React Flow's incremental node changes (selection, dimension measurement, per-frame
+    // drag positions) must not pollute undo history — only structural authoring actions
+    // (add/delete/rename/paste/fold) are undoable.
+    withoutHistory(() => set({ nodes: applyNodeChanges(changes, get().nodes) as any[] }));
   },
   onEdgesChange: (changes: EdgeChange[]) => {
     set({ edges: applyEdgeChanges(changes, get().edges) });
@@ -184,8 +187,10 @@ export const useWorkflowStore = create<WorkflowState>()(
   editingNodeId: null,
   beginInlineEdit: (id) => { get().enterEditMode(); set({ editingNodeId: id, selectedNodeId: id }); },
   commitInlineEdit: (id, label) => {
+    if (get().editingNodeId !== id) return; // ignore the redundant blur-commit after Enter
     const trimmed = label.trim();
-    if (trimmed) get().updateNodeData(id, { label: trimmed });
+    const current = get().nodes.find((n) => n.id === id)?.data.label;
+    if (trimmed && trimmed !== current) get().updateNodeData(id, { label: trimmed });
     set({ editingNodeId: null });
   },
   cancelInlineEdit: () => set({ editingNodeId: null }),
