@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { selectLearnOrder, selectVisibleUpToStep } from './useWorkflowStore';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { useWorkflowStore, selectLearnOrder, selectVisibleUpToStep } from './useWorkflowStore';
 
 const n = (id: string, extra: any = {}) => ({
   id, type: 'sovern', position: { x: 0, y: 0 },
@@ -51,5 +51,45 @@ describe('selectVisibleUpToStep', () => {
   });
   it('clamps a non-positive step to empty', () => {
     expect(selectVisibleUpToStep(['a', 'b'], 0).size).toBe(0);
+  });
+});
+
+describe('learn mode actions', () => {
+  beforeEach(() => {
+    useWorkflowStore.setState({
+      nodes: [n('a'), n('b'), n('c')] as any,
+      edges: [{ id: 'e1', source: 'a', target: 'b' }, { id: 'e2', source: 'b', target: 'c' }],
+      learnMode: false,
+      learnStep: 1,
+    });
+  });
+
+  it('enterLearnMode turns it on and resets to step 1', () => {
+    useWorkflowStore.setState({ learnStep: 5 });
+    useWorkflowStore.getState().enterLearnMode();
+    expect(useWorkflowStore.getState().learnMode).toBe(true);
+    expect(useWorkflowStore.getState().learnStep).toBe(1);
+  });
+
+  it('learnNext advances but clamps at total', () => {
+    useWorkflowStore.getState().enterLearnMode();
+    useWorkflowStore.getState().learnNext(); // 2
+    useWorkflowStore.getState().learnNext(); // 3
+    useWorkflowStore.getState().learnNext(); // clamp at 3 (total)
+    expect(useWorkflowStore.getState().learnStep).toBe(3);
+  });
+
+  it('learnPrev retreats but clamps at 1', () => {
+    useWorkflowStore.getState().enterLearnMode();
+    useWorkflowStore.getState().learnPrev();
+    expect(useWorkflowStore.getState().learnStep).toBe(1);
+  });
+
+  it('exitLearnMode leaves nodes and edges untouched', () => {
+    const before = useWorkflowStore.getState().nodes;
+    useWorkflowStore.getState().enterLearnMode();
+    useWorkflowStore.getState().exitLearnMode();
+    expect(useWorkflowStore.getState().learnMode).toBe(false);
+    expect(useWorkflowStore.getState().nodes).toBe(before); // same reference, no data write
   });
 });

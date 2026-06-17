@@ -45,6 +45,12 @@ interface WorkflowState {
   cancelInlineEdit: () => void;
   diagramLayout: DiagramLayout;
   presentationMode: boolean;
+  learnMode: boolean;
+  learnStep: number;
+  enterLearnMode: () => void;
+  exitLearnMode: () => void;
+  learnNext: () => void;
+  learnPrev: () => void;
   setViewMode: (mode: ViewMode) => void;
   setDiagramLayout: (layout: DiagramLayout) => void;
   setPresentationMode: (on: boolean) => void;
@@ -92,6 +98,15 @@ export const useWorkflowStore = create<WorkflowState>()(
   viewMode: 'mindmap',
   diagramLayout: 'tree',
   presentationMode: false,
+  learnMode: false,
+  learnStep: 1,
+  enterLearnMode: () => set({ learnMode: true, learnStep: 1 }),
+  exitLearnMode: () => set({ learnMode: false }),
+  learnNext: () => {
+    const total = selectLearnOrder(get()).total;
+    set({ learnStep: Math.min(get().learnStep + 1, Math.max(1, total)) });
+  },
+  learnPrev: () => set({ learnStep: Math.max(1, get().learnStep - 1) }),
   n8nWebhookUrl: '',
   isSyncing: false,
   isEditing: false,
