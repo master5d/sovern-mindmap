@@ -44,7 +44,9 @@ export interface SOVERNNodeData {
   urgency?: number;  // 1-10, Priority Matrix X
   created?: string;  // ISO-дата создания тикета (timeline)
   color?: string;    // severity-цвет тикета из canvas (hex)
-  shape?: 'rectangle' | 'rounded' | 'decision' | 'terminal' | 'note';
+  shape?:
+    | 'rectangle' | 'rounded' | 'decision' | 'terminal' | 'note'
+    | 'cylinder' | 'ellipse' | 'parallelogram' | 'hexagon' | 'cloud' | 'actor' | 'document';
   feedback?: Record<string, any>; // полный triage-блок mc_hub тикета
   [key: string]: any; // sovern:* metadata
 }
