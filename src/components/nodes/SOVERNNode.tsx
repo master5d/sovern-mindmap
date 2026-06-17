@@ -30,7 +30,7 @@ export const SOVERNNode = ({ id, data, selected }: NodeProps<{ data: SOVERNNodeD
   return (
     <div
       className={`px-4 py-3 shadow-2xl rounded-xl bg-surface border-2 transition-all ${
-        selected ? 'ring-4 ring-accent/20 border-accent scale-105' : 'border-edge hover:border-edge-strong'
+        selected || data.__current ? 'ring-4 ring-accent/40 border-accent scale-105' : 'border-edge hover:border-edge-strong'
       }`}
       // severity-цвет тикета (mc_hub feedback) — левый стрип; ноды без data.color не затронуты
       style={data.color ? { borderLeftColor: data.color, borderLeftWidth: 4 } : undefined}

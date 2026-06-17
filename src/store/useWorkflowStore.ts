@@ -14,7 +14,7 @@ import {
 import { SOVERNNodeData } from '../types';
 import { calculateBudgetRollup, calculateTimelineRollup } from '../utils/pmEngine';
 import { getClusteredElements, getTreeLayout, getLaneLayout } from '../utils/layout';
-import { getDescendants, getParent, cloneSubtree } from '../utils/tree';
+import { getChildren, getDescendants, getParent, cloneSubtree } from '../utils/tree';
 
 export type ViewMode = 'mindmap' | 'diagram' | 'matrix' | 'timeline' | 'kanban';
 export type DiagramLayout = 'tree' | 'lanes';
@@ -45,6 +45,12 @@ interface WorkflowState {
   cancelInlineEdit: () => void;
   diagramLayout: DiagramLayout;
   presentationMode: boolean;
+  learnMode: boolean;
+  learnStep: number;
+  enterLearnMode: () => void;
+  exitLearnMode: () => void;
+  learnNext: () => void;
+  learnPrev: () => void;
   setViewMode: (mode: ViewMode) => void;
   setDiagramLayout: (layout: DiagramLayout) => void;
   setPresentationMode: (on: boolean) => void;
@@ -92,6 +98,15 @@ export const useWorkflowStore = create<WorkflowState>()(
   viewMode: 'mindmap',
   diagramLayout: 'tree',
   presentationMode: false,
+  learnMode: false,
+  learnStep: 1,
+  enterLearnMode: () => set({ learnMode: true, learnStep: 1, selectedNodeId: null, editingNodeId: null }),
+  exitLearnMode: () => set({ learnMode: false }),
+  learnNext: () => {
+    const total = selectLearnOrder(get()).total;
+    set({ learnStep: Math.min(get().learnStep + 1, Math.max(1, total)) });
+  },
+  learnPrev: () => set({ learnStep: Math.max(1, get().learnStep - 1) }),
   n8nWebhookUrl: '',
   isSyncing: false,
   isEditing: false,
@@ -303,4 +318,75 @@ export function selectVisibleEdges(s: { nodes: any[]; edges: any[]; collapsedIds
   return s.edges.map((e) =>
     hidden.has(e.source) || hidden.has(e.target) ? { ...e, hidden: true } : e.hidden ? { ...e, hidden: false } : e,
   );
+}
+
+/**
+ * Canonical walkthrough order. Stepped nodes (finite numeric `data.step`) sort
+ * ascending by step; unstepped nodes follow in BFS order from the graph roots.
+ * Ties and the BFS fallback are broken deterministically (array index / edge order),
+ * and the function always terminates — even on a pure cycle.
+ */
+export function selectLearnOrder(s: { nodes: any[]; edges: any[] }): { order: string[]; total: number } {
+  const nodes = s.nodes as Node<SOVERNNodeData>[];
+  const edges = s.edges as Edge[];
+  if (nodes.length === 0) return { order: [], total: 0 };
+
+  const indeg = new Map<string, number>(nodes.map((nd) => [nd.id, 0]));
+  edges.forEach((e) => { if (indeg.has(e.target)) indeg.set(e.target, (indeg.get(e.target) ?? 0) + 1); });
+  const roots = nodes.filter((nd) => (indeg.get(nd.id) ?? 0) === 0);
+  const starts = roots.length ? roots : nodes.slice(0, 1);
+
+  // Visit each root's whole reachable component before moving to the next root,
+  // so a branch builds up fully before a new top-level node appears.
+  const bfsRank = new Map<string, number>();
+  const seen = new Set<string>();
+  let rank = 0;
+  for (const start of starts) {
+    if (seen.has(start.id)) continue;
+    const queue = [start.id];
+    while (queue.length) {
+      const id = queue.shift()!;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      bfsRank.set(id, rank++);
+      getChildren(id, edges).forEach((c) => { if (!seen.has(c)) queue.push(c); });
+    }
+  }
+  // Disconnected nodes (unreachable from any start) rank after the rest, by array index.
+  nodes.forEach((nd) => { if (!bfsRank.has(nd.id)) bfsRank.set(nd.id, rank++); });
+
+  const stepOf = new Map<string, number>();
+  nodes.forEach((nd) => {
+    const v = nd.data?.step;
+    if (typeof v === 'number' && Number.isFinite(v)) stepOf.set(nd.id, v);
+  });
+
+  const order = nodes.map((nd) => nd.id).sort((a, b) => {
+    const sa = stepOf.get(a), sb = stepOf.get(b);
+    if (sa !== undefined && sb !== undefined) return sa - sb || bfsRank.get(a)! - bfsRank.get(b)!;
+    if (sa !== undefined) return -1; // stepped before unstepped
+    if (sb !== undefined) return 1;
+    return bfsRank.get(a)! - bfsRank.get(b)!;
+  });
+
+  return { order, total: order.length };
+}
+
+/** Cumulative reveal: the set of node ids at order positions 0 .. learnStep-1. */
+export function selectVisibleUpToStep(order: string[], learnStep: number): Set<string> {
+  return new Set(order.slice(0, Math.max(0, learnStep)));
+}
+
+/** Current-step narration + identity for the playback UI (pure; clamps the step). */
+export function selectLearnStepText(
+  s: { nodes: any[]; edges: any[] },
+  learnStep: number,
+): { text: string; currentId: string | null; total: number } {
+  const { order, total } = selectLearnOrder(s);
+  if (total === 0) return { text: '', currentId: null, total: 0 };
+  const idx = Math.min(Math.max(learnStep, 1), total) - 1;
+  const currentId = order[idx];
+  const node = (s.nodes as Node<SOVERNNodeData>[]).find((nd) => nd.id === currentId);
+  const text = (node?.data?.note && String(node.data.note).trim()) || node?.data?.label || '';
+  return { text, currentId, total };
 }

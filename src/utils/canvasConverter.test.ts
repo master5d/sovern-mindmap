@@ -53,4 +53,30 @@ describe('canvasConverter mm:shape', () => {
     expect(nodes[0].type).toBe('shape');
     expect(nodes[0].data.shape).toBe('cylinder');
   });
+
+  it('round-trips step + note through mm:step / mm:note', () => {
+    const node: Node<SOVERNNodeData> = {
+      id: 'n1', type: 'sovern', position: { x: 0, y: 0 },
+      data: { label: 'Intro', layer: 'projects', status: 'idle', step: 2, note: 'First we set the scene.' },
+    };
+    const c = toJSONCanvas([node], []);
+    expect(c.nodes[0].metadata?.['mm:step']).toBe(2);
+    expect(c.nodes[0].metadata?.['mm:note']).toBe('First we set the scene.');
+    const { nodes } = fromJSONCanvas(c);
+    expect(nodes[0].data.step).toBe(2);
+    expect(nodes[0].data.note).toBe('First we set the scene.');
+  });
+
+  it('omits mm:step / mm:note when absent (backward compatible)', () => {
+    const node: Node<SOVERNNodeData> = {
+      id: 'n1', type: 'sovern', position: { x: 0, y: 0 },
+      data: { label: 'Plain', layer: 'projects', status: 'idle' },
+    };
+    const c = toJSONCanvas([node], []);
+    expect(c.nodes[0].metadata && 'mm:step' in c.nodes[0].metadata).toBe(false);
+    expect(c.nodes[0].metadata && 'mm:note' in c.nodes[0].metadata).toBe(false);
+    const { nodes } = fromJSONCanvas(c);
+    expect(nodes[0].data.step).toBeUndefined();
+    expect(nodes[0].data.note).toBeUndefined();
+  });
 });

@@ -19,4 +19,10 @@ describe('buildDiagramMessages', () => {
     expect(sys).toContain('actor');
     expect(sys).toContain('cloud');
   });
+
+  it('documents the optional walkthrough keys mm:step and mm:note', () => {
+    const sys = buildDiagramMessages('anything')[0].content;
+    expect(sys).toContain('mm:step');
+    expect(sys).toContain('mm:note');
+  });
 });

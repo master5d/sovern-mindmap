@@ -41,6 +41,15 @@ export function extractCanvas(raw: string): JSONCanvas {
     if (metadata['mm:shape'] && !SHAPES.includes(metadata['mm:shape'])) {
       metadata['mm:shape'] = 'rectangle';
     }
+    // mm:step must be a positive integer; drop otherwise. mm:note must be a string.
+    if ('mm:step' in metadata) {
+      const s = metadata['mm:step'];
+      if (typeof s === 'number' && Number.isInteger(s) && s > 0) metadata['mm:step'] = s;
+      else delete metadata['mm:step'];
+    }
+    if ('mm:note' in metadata && typeof metadata['mm:note'] !== 'string') {
+      delete metadata['mm:note'];
+    }
     nodes.push({
       id,
       type: 'text',

@@ -75,4 +75,23 @@ describe('extractCanvas', () => {
     const md = extractCanvas(raw).nodes[0].metadata!;
     expect(md['0']).toBeUndefined();
   });
+
+  it('keeps a positive-integer mm:step and a string mm:note', () => {
+    const raw = '{"nodes":[{"id":"a","type":"text","x":0,"y":0,"width":150,"height":60,"text":"A","metadata":{"mm:step":2,"mm:note":"hello"}}],"edges":[]}';
+    const md = extractCanvas(raw).nodes[0].metadata!;
+    expect(md['mm:step']).toBe(2);
+    expect(md['mm:note']).toBe('hello');
+  });
+
+  it('drops a non-positive or non-integer mm:step', () => {
+    const raw = '{"nodes":[{"id":"a","type":"text","x":0,"y":0,"width":150,"height":60,"text":"A","metadata":{"mm:step":0}},{"id":"b","type":"text","x":0,"y":0,"width":150,"height":60,"text":"B","metadata":{"mm:step":"2"}}],"edges":[]}';
+    const c = extractCanvas(raw);
+    expect('mm:step' in c.nodes[0].metadata!).toBe(false);
+    expect('mm:step' in c.nodes[1].metadata!).toBe(false);
+  });
+
+  it('drops a non-string mm:note', () => {
+    const raw = '{"nodes":[{"id":"a","type":"text","x":0,"y":0,"width":150,"height":60,"text":"A","metadata":{"mm:note":42}}],"edges":[]}';
+    expect('mm:note' in extractCanvas(raw).nodes[0].metadata!).toBe(false);
+  });
 });

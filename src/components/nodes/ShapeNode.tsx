@@ -41,21 +41,22 @@ export const ShapeNode = ({ id, data, selected }: NodeProps<{ data: SOVERNNodeDa
     </div>
   );
 
-  const ring = selected ? 'ring-4 ring-accent/20' : '';
+  const highlighted = selected || data.__current;
+  const ring = highlighted ? 'ring-4 ring-accent/40' : '';
   const Icon = geom.Icon;
 
   let content: React.ReactNode;
   if (geom.mode === 'svg') {
     content = (
       <div className={`relative px-5 py-4 min-w-[150px] max-w-[240px] ${ring}`}>
-        {geom.svg!(!!selected)}
+        {geom.svg!(!!highlighted)}
         <div className="relative">{label}</div>
       </div>
     );
   } else if (geom.mode === 'icon') {
     content = (
       <div className={`px-4 py-3 min-w-[140px] max-w-[240px] shadow-xl bg-surface border-2 flex flex-col items-center gap-1 ${
-        selected ? `border-accent ${ring}` : 'border-edge hover:border-edge-strong'
+        highlighted ? `border-accent ${ring}` : 'border-edge hover:border-edge-strong'
       } ${geom.className ?? ''}`}>
         {Icon && <Icon size={20} className="text-accent" />}
         {label}
@@ -64,7 +65,7 @@ export const ShapeNode = ({ id, data, selected }: NodeProps<{ data: SOVERNNodeDa
   } else {
     content = (
       <div className={`px-4 py-3 min-w-[140px] max-w-[240px] shadow-xl bg-surface border-2 transition-all ${
-        selected ? `border-accent ${ring}` : 'border-edge hover:border-edge-strong'
+        highlighted ? `border-accent ${ring}` : 'border-edge hover:border-edge-strong'
       } ${geom.className ?? ''}`}>
         {label}
       </div>
