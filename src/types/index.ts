@@ -53,6 +53,7 @@ export interface SOVERNNodeData {
   shape?: ShapeKind;
   step?: number;   // 1-based walkthrough order (Learn mode); absent → BFS fallback
   note?: string;   // narration shown when this node is the current Learn step
+  __current?: boolean; // display-only: marks the current Learn step node; never persisted
   feedback?: Record<string, any>; // полный triage-блок mc_hub тикета
   [key: string]: any; // sovern:* metadata
 }

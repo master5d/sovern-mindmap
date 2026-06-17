@@ -71,6 +71,13 @@ describe('learn mode actions', () => {
     expect(useWorkflowStore.getState().learnStep).toBe(1);
   });
 
+  it('enterLearnMode clears any selection and inline edit (read-only invariant)', () => {
+    useWorkflowStore.setState({ selectedNodeId: 'b', editingNodeId: 'b' });
+    useWorkflowStore.getState().enterLearnMode();
+    expect(useWorkflowStore.getState().selectedNodeId).toBeNull();
+    expect(useWorkflowStore.getState().editingNodeId).toBeNull();
+  });
+
   it('learnNext advances but clamps at total', () => {
     useWorkflowStore.getState().enterLearnMode();
     useWorkflowStore.getState().learnNext(); // 2

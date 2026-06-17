@@ -40,6 +40,10 @@ const nodeTypes = {
   shape: ShapeNode,
 };
 
+// Stable no-op so learn mode (read-only) can detach React Flow's change handlers
+// without writing to the store or re-creating a closure each render.
+const NOOP = () => {};
+
 const prdNodes: Node<SOVERNNodeData>[] = [
   { id: 'root', type: 'sovern', position: { x: 500, y: 0 }, data: { label: 'SOVERN MindMap Control Plane', layer: 'human', status: 'active', budget: 0, urgency: 10, impact: 10, dates: { start: '2026-05-05', end: '2026-07-30' } } },
   { id: 'boss-core', type: 'sovern', position: { x: 500, y: 150 }, data: { label: 'System Orchestrator', layer: 'boss', status: 'active', agent: 'Hermes', urgency: 9, impact: 10 } },
@@ -158,7 +162,9 @@ function Flow() {
   }, [learnMode, learnStep, fitView]);
 
   const isCanvasView = viewMode === 'mindmap' || viewMode === 'diagram';
-  useGraphKeyboard(isCanvasView);
+  // Learn mode is read-only: the editor's authoring keys (Tab/Enter/F2/Delete/paste)
+  // must be gated off so a stray keypress can't mutate the graph or undo history.
+  useGraphKeyboard(isCanvasView && !learnMode);
   const displayEdges = !isCanvasView
     ? []
     : viewMode === 'diagram'
@@ -198,11 +204,12 @@ function Flow() {
       <ReactFlow
         nodes={renderNodes}
         edges={renderEdges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
+        onNodesChange={learnMode ? NOOP : onNodesChange}
+        onEdgesChange={learnMode ? NOOP : onEdgesChange}
+        onConnect={learnMode ? NOOP : onConnect}
         nodeTypes={nodeTypes as any}
         nodesDraggable={viewMode !== 'diagram' && !learnMode}
+        elementsSelectable={!learnMode}
         fitView
         minZoom={0.05}
         colorMode={resolved}

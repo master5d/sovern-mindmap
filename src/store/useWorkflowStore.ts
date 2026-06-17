@@ -100,7 +100,7 @@ export const useWorkflowStore = create<WorkflowState>()(
   presentationMode: false,
   learnMode: false,
   learnStep: 1,
-  enterLearnMode: () => set({ learnMode: true, learnStep: 1 }),
+  enterLearnMode: () => set({ learnMode: true, learnStep: 1, selectedNodeId: null, editingNodeId: null }),
   exitLearnMode: () => set({ learnMode: false }),
   learnNext: () => {
     const total = selectLearnOrder(get()).total;
