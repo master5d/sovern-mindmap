@@ -12,4 +12,11 @@ describe('buildDiagramMessages', () => {
     expect(user.role).toBe('user');
     expect(user.content).toContain('a login flow');
   });
+
+  it('documents the extended shapes', () => {
+    const sys = buildDiagramMessages('x')[0].content;
+    expect(sys).toContain('cylinder');
+    expect(sys).toContain('actor');
+    expect(sys).toContain('cloud');
+  });
 });
