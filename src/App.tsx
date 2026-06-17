@@ -219,7 +219,10 @@ function Flow() {
   const visibleNodes = selectVisibleNodes({ nodes, edges, collapsedIds });
   const visibleDisplayEdges = selectVisibleEdges({ nodes, edges: displayEdges, collapsedIds });
 
-  const learn = learnMode ? selectLearnOrder({ nodes, edges }) : null;
+  // Learn order must ignore lane backgrounds (they have in-degree 0 → would rank as roots and
+  // pollute the step sequence). This also matches exportLearnHtml, which passes lane-filtered
+  // nodes — keeping the live reveal order and the exported frames/narration in sync.
+  const learn = learnMode ? selectLearnOrder({ nodes: nodes.filter((n) => n.type !== 'lane'), edges }) : null;
   const learnVisible = learn ? selectVisibleUpToStep(learn.order, learnStep) : null;
   const currentLearnId = learn ? learn.order[Math.min(learnStep, learn.total) - 1] : null;
 
