@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useWorkflowStore, selectLearnOrder, selectVisibleUpToStep } from './useWorkflowStore';
+import { useWorkflowStore, selectLearnOrder, selectVisibleUpToStep, selectLearnStepText } from './useWorkflowStore';
 
 const n = (id: string, extra: any = {}) => ({
   id, type: 'sovern', position: { x: 0, y: 0 },
@@ -91,5 +91,31 @@ describe('learn mode actions', () => {
     useWorkflowStore.getState().exitLearnMode();
     expect(useWorkflowStore.getState().learnMode).toBe(false);
     expect(useWorkflowStore.getState().nodes).toBe(before); // same reference, no data write
+  });
+});
+
+describe('selectLearnStepText', () => {
+  const nodes = [n('a', { note: 'Begin here.' }), n('b'), n('c')];
+  const edges = [{ id: 'e1', source: 'a', target: 'b' }, { id: 'e2', source: 'b', target: 'c' }];
+
+  it('returns the current note, current id, and total', () => {
+    const r = selectLearnStepText({ nodes, edges }, 1);
+    expect(r.text).toBe('Begin here.');
+    expect(r.currentId).toBe('a');
+    expect(r.total).toBe(3);
+  });
+
+  it('falls back to the node label when the step has no note', () => {
+    expect(selectLearnStepText({ nodes, edges }, 2).text).toBe('b');
+  });
+
+  it('clamps an out-of-range step into bounds', () => {
+    expect(selectLearnStepText({ nodes, edges }, 99).currentId).toBe('c');
+    expect(selectLearnStepText({ nodes, edges }, 0).currentId).toBe('a');
+  });
+
+  it('is safe on an empty canvas', () => {
+    const r = selectLearnStepText({ nodes: [], edges: [] }, 1);
+    expect(r).toEqual({ text: '', currentId: null, total: 0 });
   });
 });

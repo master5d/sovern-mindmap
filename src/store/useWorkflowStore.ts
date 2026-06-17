@@ -376,3 +376,17 @@ export function selectLearnOrder(s: { nodes: any[]; edges: any[] }): { order: st
 export function selectVisibleUpToStep(order: string[], learnStep: number): Set<string> {
   return new Set(order.slice(0, Math.max(0, learnStep)));
 }
+
+/** Current-step narration + identity for the playback UI (pure; clamps the step). */
+export function selectLearnStepText(
+  s: { nodes: any[]; edges: any[] },
+  learnStep: number,
+): { text: string; currentId: string | null; total: number } {
+  const { order, total } = selectLearnOrder(s);
+  if (total === 0) return { text: '', currentId: null, total: 0 };
+  const idx = Math.min(Math.max(learnStep, 1), total) - 1;
+  const currentId = order[idx];
+  const node = (s.nodes as Node<SOVERNNodeData>[]).find((nd) => nd.id === currentId);
+  const text = (node?.data?.note && String(node.data.note).trim()) || node?.data?.label || '';
+  return { text, currentId, total };
+}
