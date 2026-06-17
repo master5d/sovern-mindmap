@@ -45,4 +45,29 @@ describe('extractCanvas', () => {
   it('throws DiagramParseError on non-JSON', () => {
     expect(() => extractCanvas('I cannot draw that.')).toThrow(DiagramParseError);
   });
+
+  it('skips/ignores non-object nodes without throwing', () => {
+    const raw = '{"nodes":[null,5,{"id":"a","type":"text","x":0,"y":0,"width":150,"height":60,"text":"A"}],"edges":[]}';
+    const c = extractCanvas(raw);
+    // every produced node is valid (string id, finite geometry)
+    expect(c.nodes.every((n) => typeof n.id === 'string' && Number.isFinite(n.x) && Number.isFinite(n.width))).toBe(true);
+    expect(c.nodes.some((n) => n.text === 'A')).toBe(true);
+  });
+
+  it('coerces a numeric node id to a generated string id', () => {
+    const raw = '{"nodes":[{"id":42,"type":"text","x":0,"y":0,"width":150,"height":60,"text":"A"}],"edges":[]}';
+    const n = extractCanvas(raw).nodes[0];
+    expect(typeof n.id).toBe('string');
+    expect(n.id).not.toBe('42');
+  });
+
+  it('throws DiagramParseError when the root JSON is an array', () => {
+    expect(() => extractCanvas('[1,2,3]')).toThrow(DiagramParseError);
+  });
+
+  it('does not spread a primitive metadata into indexed keys', () => {
+    const raw = '{"nodes":[{"id":"a","type":"text","x":0,"y":0,"width":150,"height":60,"text":"A","metadata":"hexagon"}],"edges":[]}';
+    const md = extractCanvas(raw).nodes[0].metadata!;
+    expect(md['0']).toBeUndefined();
+  });
 });

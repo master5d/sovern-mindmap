@@ -37,7 +37,7 @@ export function extractCanvas(raw: string): JSONCanvas {
     let id = typeof n?.id === 'string' && n.id ? n.id : `n-${crypto.randomUUID()}`;
     while (ids.has(id)) id = `n-${crypto.randomUUID()}`;
     ids.add(id);
-    const metadata = { ...(n?.metadata ?? {}) };
+    const metadata = n?.metadata && typeof n.metadata === 'object' ? { ...n.metadata } : {};
     if (metadata['mm:shape'] && !SHAPES.includes(metadata['mm:shape'])) {
       metadata['mm:shape'] = 'rectangle';
     }
