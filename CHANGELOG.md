@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.0.0-alpha.7] - 2026-06-17
+
+### 🚀 Added — Export suite (slices 5–7)
+- **Export HTML (slice 5):** one self-contained interactive `.html` of the canvas — `html-to-image` `toSvg` snapshot captured in **both themes** + a vanilla pan/zoom + dark/light shell. Shared `computeExportViewport` + `saveFile` extracted from the PNG export (DRY).
+- **Export `.drawio` (slice 6):** pure mxGraph serializer (`canvasToDrawio`) maps shapes back via `mapShapeToDrawioStyle` (inverse of the import map; `mapDrawioStyleToShape(mapShapeToDrawioStyle(s)) === s` for all 12) — opens editable in real draw.io. Completes the import↔export round-trip (proven by an integration test through the real import pipeline, and verified in real draw.io via its CLI).
+- **Export Learn HTML (slice 7):** bake the Learn-mode walkthrough into a self-contained `.html` — drives Learn mode through steps 1..N, captures each as a **transparent** SVG frame, embeds them in a pure frame-switcher shell (prev/next + per-step narration + a **neutral hybrid background** that reads on light and dark host pages). The authoring-time bridge for embedding a step-through in an LMS unit via `<iframe>`.
+
+### 🔒 Security
+- Every exported HTML references **no external resources**; labels, narration and titles are HTML/XML-escaped; no user/graph data is interpolated into any inline `<script>`.
+
+## [v1.0.0-alpha.6] - 2026-06-17
+
+### 🚀 Added — Learn mode (slice 3) + `.drawio` import (slice 4)
+- **Learn mode (slice 3):** a read-only step-through — cumulative node reveal + per-step narration + `→`/`←`/`Space`. Step order + narration ride in JSON Canvas metadata (`mm:step` / `mm:note`), filled by the AI generator or falling back to a deterministic BFS from the graph roots. The current step is accent-ringed; the view re-frames each step.
+- **Import `.drawio` (slice 4):** load an existing draw.io file (compressed deflate-raw or uncompressed "Edit Diagram" XML, first page) onto the canvas — vertices/edges/labels with **real coordinates preserved**; styles best-effort-mapped to the 12 shapes (unknown → rectangle). Native `DOMParser` + `DecompressionStream('deflate-raw')`, zero new dependencies.
+
+### 🛠️ Fixed
+- **Learn mode is strictly read-only:** the editor's authoring keys, node dragging and selection are gated off (a stray keypress can't mutate the graph or undo history), and lane backgrounds are excluded from the step order.
+- **`.drawio` import** drops draw.io group wrappers and edge-label child cells (no phantom rectangles at 0,0) and resolves nested-child coordinates to absolute by walking the `parent` chain.
+
 ## [v1.0.0-alpha.5] - 2026-06-17
 
 ### 🚀 Added — Richer shape vocabulary (AI-canvas slice 2)

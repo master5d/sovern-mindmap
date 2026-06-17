@@ -41,6 +41,18 @@ Describe a diagram in the prompt bar and an **editable** one appears on the same
 *   **🔷 12 shapes:** rectangle · rounded · decision · terminal · note · cylinder (datastore) · ellipse · parallelogram (I/O) · hexagon · cloud (service) · actor (user) · document — one `SHAPE_KINDS` source of truth, rendered via the `shapeGeometry` registry.
 *   Needs the LiteLLM gateway running (canonical port in `NAUTILUS/config/services.json`; the proxy defaults to `:4001`, override with `SOVERN_LLM_GATEWAY`).
 
+### 6. Learn Mode (step-through walkthroughs)
+Turn any diagram into a **cumulative, self-paced walkthrough** — built for non-technical learners (the canvas materialises a concept step by step instead of dumping the whole schema at once). Enter via the **🎓 GraduationCap** toolbar button; it's read-only (editor keys, dragging and selection are gated off).
+*   **▶️ Cumulative reveal:** `→` / `Space` / `←` reveal nodes one at a time, with the current node accent-ringed and the picture re-framed each step.
+*   **🗣️ Per-step narration:** step order and a sentence of narration ride inside the node as `mm:step` / `mm:note` (carried through JSON Canvas like `mm:shape`); the AI generator fills them, otherwise the order falls back to a deterministic BFS from the graph roots.
+
+### 7. Import & Export (draw.io interop + shareable artifacts)
+*   **📥 Import `.drawio`:** load an existing draw.io file (compressed or "Edit Diagram" XML) — vertices, edges, labels and **real coordinates** are mapped onto the canvas; shapes best-effort-mapped to the 12-shape vocabulary. Native `DOMParser` + `DecompressionStream` (no dependency).
+*   **📤 Export `.drawio`:** serialize the canvas back to mxGraph XML — opens editable in real draw.io. The import↔export round-trip is proven by an integration test and verified in real draw.io.
+*   **🖼️ Export PNG / 🌐 Export HTML:** a one-file interactive HTML (pan/zoom + dark/light toggle, captured in both themes) — a shareable diagram, no app or server needed.
+*   **🎬 Export Learn HTML:** bake the **Learn-mode walkthrough** into a single self-contained `.html` (cumulative frames + narration + prev/next on a neutral background that reads on light and dark pages) — drop it into an `<iframe>` to embed a step-through in an LMS/course unit; it keeps working even if this app goes away.
+*   *Every exported HTML references **no external resources** and escapes all untrusted labels/text.*
+
 ---
 
 ## 🛠️ Tech Stack
@@ -80,6 +92,9 @@ npm run dev
 *   [`/src/utils/pmEngine.ts`](./src/utils/pmEngine.ts) — Deterministic math for tokens and dates.
 *   [`/src/utils/layout.ts`](./src/utils/layout.ts) — Dagre auto-layout + feedback-board cluster layout.
 *   [`/src/utils/feedback.ts`](./src/utils/feedback.ts) — Shared area/category/status palette + Priority Matrix quadrants.
+*   [`/src/ai`](./src/ai) — Prompt → diagram pipeline (LiteLLM client, `extractCanvas`, `generateDiagram`).
+*   [`/src/drawio`](./src/drawio) — draw.io interop: import (`inflate`, `drawioToCanvas`, `mxStyle`) and export (`canvasToDrawio`, `exportDrawio`).
+*   [`/src/export`](./src/export) — Self-contained artifact exporters: PNG, HTML, and Learn-HTML walkthroughs (`captureCanvasSvg`, `htmlTemplate`, `learnHtmlTemplate`, `saveFile`).
 *   [`AGENT_INTEGRATION.md`](./AGENT_INTEGRATION.md) — How to connect your agents.
 
 ---
