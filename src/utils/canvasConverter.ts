@@ -27,6 +27,8 @@ export const toJSONCanvas = (nodes: Node<SOVERNNodeData>[], edges: Edge[]): JSON
       },
     };
     if (node.data.shape) canvasNode.metadata!['mm:shape'] = node.data.shape;
+    if (typeof node.data.step === 'number') canvasNode.metadata!['mm:step'] = node.data.step;
+    if (typeof node.data.note === 'string' && node.data.note) canvasNode.metadata!['mm:note'] = node.data.note;
     if (node.data.color) canvasNode.color = node.data.color;
     return canvasNode;
   });
@@ -61,6 +63,8 @@ export const fromJSONCanvas = (canvas: JSONCanvas): { nodes: Node<SOVERNNodeData
           status: node.metadata?.['sovern:status'] || 'idle',
           shape,
           color: node.color,
+          step: typeof node.metadata?.['mm:step'] === 'number' ? node.metadata['mm:step'] : undefined,
+          note: typeof node.metadata?.['mm:note'] === 'string' ? node.metadata['mm:note'] : undefined,
         },
       };
     }
@@ -80,6 +84,8 @@ export const fromJSONCanvas = (canvas: JSONCanvas): { nodes: Node<SOVERNNodeData
         created: node.metadata?.['sovern:created'],
         feedback: node.metadata?.['feedback'],
         color: node.color,
+        step: typeof node.metadata?.['mm:step'] === 'number' ? node.metadata['mm:step'] : undefined,
+        note: typeof node.metadata?.['mm:note'] === 'string' ? node.metadata['mm:note'] : undefined,
       },
     };
   });
