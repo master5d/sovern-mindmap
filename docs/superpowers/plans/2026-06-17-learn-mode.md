@@ -366,16 +366,21 @@ export function selectLearnOrder(s: { nodes: any[]; edges: any[] }): { order: st
   const roots = nodes.filter((nd) => (indeg.get(nd.id) ?? 0) === 0);
   const starts = roots.length ? roots : nodes.slice(0, 1);
 
+  // Visit each root's whole reachable component before moving to the next root,
+  // so a branch builds up fully before a new top-level node appears.
   const bfsRank = new Map<string, number>();
-  const queue = starts.map((nd) => nd.id);
   const seen = new Set<string>();
   let rank = 0;
-  while (queue.length) {
-    const id = queue.shift()!;
-    if (seen.has(id)) continue;
-    seen.add(id);
-    bfsRank.set(id, rank++);
-    getChildren(id, edges).forEach((c) => { if (!seen.has(c)) queue.push(c); });
+  for (const start of starts) {
+    if (seen.has(start.id)) continue;
+    const queue = [start.id];
+    while (queue.length) {
+      const id = queue.shift()!;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      bfsRank.set(id, rank++);
+      getChildren(id, edges).forEach((c) => { if (!seen.has(c)) queue.push(c); });
+    }
   }
   // Disconnected nodes (unreachable from any start) rank after the rest, by array index.
   nodes.forEach((nd) => { if (!bfsRank.has(nd.id)) bfsRank.set(nd.id, rank++); });
