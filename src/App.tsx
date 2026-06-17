@@ -25,6 +25,7 @@ import { NodeSidebar } from './components/NodeSidebar';
 import { EditModeBanner } from './components/EditModeBanner';
 import { AiPromptBar } from './components/AiPromptBar';
 import { LearnControls } from './components/LearnControls';
+import { DrawioImportButton } from './components/DrawioImportButton';
 import { KanbanBoard } from './components/KanbanBoard';
 import { MatrixView } from './components/MatrixView';
 import { TimelineView } from './components/TimelineView';
@@ -270,6 +271,7 @@ function Flow() {
           <div className="flex space-x-1.5 px-2 border-r border-edge">
             <button onClick={loadFromFile} title="Load canvas" className="p-2.5 text-secondary hover:text-orange-400"><FolderOpen size={18} /></button>
             <button onClick={loadWorkspace} title="Open my workspace" className="p-2.5 text-secondary hover:text-orange-400"><History size={18} /></button>
+            <DrawioImportButton notify={notify} />
             <button onClick={saveToFile} title="Save canvas" className="p-2.5 text-secondary hover:text-accent"><Save size={18} /></button>
             <button onClick={onExport} disabled={exporting} title="Export PNG" className="p-2.5 text-secondary hover:text-accent disabled:opacity-40"><ImageDown size={18} /></button>
           </div>
