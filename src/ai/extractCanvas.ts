@@ -1,6 +1,9 @@
 import { JSONCanvas, JSONCanvasNode, JSONCanvasEdge } from '../types';
 
-const SHAPES = ['rectangle', 'rounded', 'decision', 'terminal', 'note'];
+const SHAPES = [
+  'rectangle', 'rounded', 'decision', 'terminal', 'note',
+  'cylinder', 'ellipse', 'parallelogram', 'hexagon', 'cloud', 'actor', 'document',
+];
 
 export class DiagramParseError extends Error {
   constructor(message: string) {

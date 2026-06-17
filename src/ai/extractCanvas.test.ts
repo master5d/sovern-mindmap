@@ -25,8 +25,13 @@ describe('extractCanvas', () => {
   });
 
   it('coerces an unknown mm:shape to rectangle', () => {
-    const raw = '{"nodes":[{"id":"a","type":"text","x":0,"y":0,"width":150,"height":60,"text":"A","metadata":{"mm:shape":"hexagon"}}],"edges":[]}';
+    const raw = '{"nodes":[{"id":"a","type":"text","x":0,"y":0,"width":150,"height":60,"text":"A","metadata":{"mm:shape":"trapezoid"}}],"edges":[]}';
     expect(extractCanvas(raw).nodes[0].metadata!['mm:shape']).toBe('rectangle');
+  });
+
+  it('keeps a recognized extended shape (cylinder)', () => {
+    const raw = '{"nodes":[{"id":"a","type":"text","x":0,"y":0,"width":150,"height":60,"text":"DB","metadata":{"mm:shape":"cylinder"}}],"edges":[]}';
+    expect(extractCanvas(raw).nodes[0].metadata!['mm:shape']).toBe('cylinder');
   });
 
   it('drops edges whose endpoints do not exist', () => {
