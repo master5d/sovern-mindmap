@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mapDrawioStyleToShape } from './mxStyle';
+import { mapDrawioStyleToShape, mapShapeToDrawioStyle } from './mxStyle';
 import { SHAPE_KINDS } from '../types';
 
 describe('mapDrawioStyleToShape', () => {
@@ -27,6 +27,22 @@ describe('mapDrawioStyleToShape', () => {
     const samples = ['ellipse', 'rhombus', 'foo=bar', '', 'shape=mystery', 'text;'];
     for (const s of samples) {
       expect(SHAPE_KINDS as readonly string[]).toContain(mapDrawioStyleToShape(s));
+    }
+  });
+});
+
+describe('mapShapeToDrawioStyle', () => {
+  it('maps each shape to a representative drawio style', () => {
+    expect(mapShapeToDrawioStyle('rounded')).toContain('rounded=1');
+    expect(mapShapeToDrawioStyle('decision')).toContain('rhombus');
+    expect(mapShapeToDrawioStyle('cylinder')).toContain('cylinder');
+    expect(mapShapeToDrawioStyle('actor')).toContain('Actor');
+    expect(mapShapeToDrawioStyle('rectangle')).not.toContain('shape=');
+  });
+
+  it('round-trips every SHAPE_KIND back through the forward map', () => {
+    for (const s of SHAPE_KINDS) {
+      expect(mapDrawioStyleToShape(mapShapeToDrawioStyle(s))).toBe(s);
     }
   });
 });
