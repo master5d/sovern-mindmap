@@ -37,4 +37,14 @@ describe('generateDiagram', () => {
     expect(onError).toHaveBeenCalledOnce();
     expect(useWorkflowStore.getState().nodes).toHaveLength(0);
   });
+
+  it('a generated diagram is a single undo step', async () => {
+    const request = vi.fn().mockResolvedValue(CANVAS);
+    useWorkflowStore.temporal.getState().clear();
+    await generateDiagram('a flow', { request });
+    expect(useWorkflowStore.getState().nodes).toHaveLength(2);
+    useWorkflowStore.temporal.getState().undo();
+    expect(useWorkflowStore.getState().nodes).toHaveLength(0);
+    useWorkflowStore.temporal.getState().pause();
+  });
 });

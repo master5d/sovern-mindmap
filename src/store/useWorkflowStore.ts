@@ -271,7 +271,7 @@ export const useWorkflowStore = create<WorkflowState>()(
   addGeneratedGraph: (newNodes, newEdges) => {
     get().enterEditMode();
     set({ nodes: [...get().nodes, ...newNodes], edges: [...get().edges, ...newEdges] });
-    get().autoLayout();
+    withoutHistory(() => get().autoLayout());
   },
     }),
     {
