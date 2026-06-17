@@ -14,7 +14,7 @@ import {
 import { SOVERNNodeData } from '../types';
 import { calculateBudgetRollup, calculateTimelineRollup } from '../utils/pmEngine';
 import { getClusteredElements, getTreeLayout, getLaneLayout } from '../utils/layout';
-import { getDescendants, getParent, cloneSubtree } from '../utils/tree';
+import { getChildren, getDescendants, getParent, cloneSubtree } from '../utils/tree';
 
 export type ViewMode = 'mindmap' | 'diagram' | 'matrix' | 'timeline' | 'kanban';
 export type DiagramLayout = 'tree' | 'lanes';
@@ -303,4 +303,61 @@ export function selectVisibleEdges(s: { nodes: any[]; edges: any[]; collapsedIds
   return s.edges.map((e) =>
     hidden.has(e.source) || hidden.has(e.target) ? { ...e, hidden: true } : e.hidden ? { ...e, hidden: false } : e,
   );
+}
+
+/**
+ * Canonical walkthrough order. Stepped nodes (finite numeric `data.step`) sort
+ * ascending by step; unstepped nodes follow in BFS order from the graph roots.
+ * Ties and the BFS fallback are broken deterministically (array index / edge order),
+ * and the function always terminates — even on a pure cycle.
+ */
+export function selectLearnOrder(s: { nodes: any[]; edges: any[] }): { order: string[]; total: number } {
+  const nodes = s.nodes as Node<SOVERNNodeData>[];
+  const edges = s.edges as Edge[];
+  if (nodes.length === 0) return { order: [], total: 0 };
+
+  const indeg = new Map<string, number>(nodes.map((nd) => [nd.id, 0]));
+  edges.forEach((e) => { if (indeg.has(e.target)) indeg.set(e.target, (indeg.get(e.target) ?? 0) + 1); });
+  const roots = nodes.filter((nd) => (indeg.get(nd.id) ?? 0) === 0);
+  const starts = roots.length ? roots : nodes.slice(0, 1);
+
+  // Visit each root's whole reachable component before moving to the next root,
+  // so a branch builds up fully before a new top-level node appears.
+  const bfsRank = new Map<string, number>();
+  const seen = new Set<string>();
+  let rank = 0;
+  for (const start of starts) {
+    if (seen.has(start.id)) continue;
+    const queue = [start.id];
+    while (queue.length) {
+      const id = queue.shift()!;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      bfsRank.set(id, rank++);
+      getChildren(id, edges).forEach((c) => { if (!seen.has(c)) queue.push(c); });
+    }
+  }
+  // Disconnected nodes (unreachable from any start) rank after the rest, by array index.
+  nodes.forEach((nd) => { if (!bfsRank.has(nd.id)) bfsRank.set(nd.id, rank++); });
+
+  const stepOf = new Map<string, number>();
+  nodes.forEach((nd) => {
+    const v = nd.data?.step;
+    if (typeof v === 'number' && Number.isFinite(v)) stepOf.set(nd.id, v);
+  });
+
+  const order = nodes.map((nd) => nd.id).sort((a, b) => {
+    const sa = stepOf.get(a), sb = stepOf.get(b);
+    if (sa !== undefined && sb !== undefined) return sa - sb || bfsRank.get(a)! - bfsRank.get(b)!;
+    if (sa !== undefined) return -1; // stepped before unstepped
+    if (sb !== undefined) return 1;
+    return bfsRank.get(a)! - bfsRank.get(b)!;
+  });
+
+  return { order, total: order.length };
+}
+
+/** Cumulative reveal: the set of node ids at order positions 0 .. learnStep-1. */
+export function selectVisibleUpToStep(order: string[], learnStep: number): Set<string> {
+  return new Set(order.slice(0, Math.max(0, learnStep)));
 }
