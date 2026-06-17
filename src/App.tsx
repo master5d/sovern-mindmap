@@ -145,6 +145,8 @@ function Flow() {
     if (exportingDrawio) return;
     setExportingDrawio(true);
     try {
+      // lane nodes are decorative backgrounds (no edge ever targets one), so passing all
+      // edges is safe — none will dangle against the lane-filtered node set.
       await exportDrawio(nodes.filter((n) => n.type !== 'lane'), edges, { notify });
     } finally {
       setExportingDrawio(false);
