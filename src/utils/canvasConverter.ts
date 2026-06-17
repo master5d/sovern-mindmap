@@ -26,6 +26,7 @@ export const toJSONCanvas = (nodes: Node<SOVERNNodeData>[], edges: Edge[]): JSON
         feedback: node.data.feedback,
       },
     };
+    if (node.data.shape) canvasNode.metadata!['mm:shape'] = node.data.shape;
     if (node.data.color) canvasNode.color = node.data.color;
     return canvasNode;
   });
@@ -47,24 +48,41 @@ export const toJSONCanvas = (nodes: Node<SOVERNNodeData>[], edges: Edge[]): JSON
  * Converts Obsidian JSON Canvas data back to React Flow nodes and edges.
  */
 export const fromJSONCanvas = (canvas: JSONCanvas): { nodes: Node<SOVERNNodeData>[]; edges: Edge[] } => {
-  const nodes: Node<SOVERNNodeData>[] = canvas.nodes.map((node) => ({
-    id: node.id,
-    type: 'sovern',
-    position: { x: node.x, y: node.y },
-    data: {
-      label: node.text || '',
-      layer: node.metadata?.['sovern:layer'] || 'projects',
-      status: node.metadata?.['sovern:status'] || 'idle',
-      budget: node.metadata?.['sovern:budget'],
-      agent: node.metadata?.['sovern:agent'],
-      dates: node.metadata?.['sovern:dates'],
-      impact: node.metadata?.['sovern:impact'],
-      urgency: node.metadata?.['sovern:urgency'],
-      created: node.metadata?.['sovern:created'],
-      feedback: node.metadata?.['feedback'],
-      color: node.color,
-    },
-  }));
+  const nodes: Node<SOVERNNodeData>[] = canvas.nodes.map((node) => {
+    const shape = node.metadata?.['mm:shape'];
+    if (shape) {
+      return {
+        id: node.id,
+        type: 'shape',
+        position: { x: node.x, y: node.y },
+        data: {
+          label: node.text || '',
+          layer: node.metadata?.['sovern:layer'] || 'projects',
+          status: node.metadata?.['sovern:status'] || 'idle',
+          shape,
+          color: node.color,
+        },
+      };
+    }
+    return {
+      id: node.id,
+      type: 'sovern',
+      position: { x: node.x, y: node.y },
+      data: {
+        label: node.text || '',
+        layer: node.metadata?.['sovern:layer'] || 'projects',
+        status: node.metadata?.['sovern:status'] || 'idle',
+        budget: node.metadata?.['sovern:budget'],
+        agent: node.metadata?.['sovern:agent'],
+        dates: node.metadata?.['sovern:dates'],
+        impact: node.metadata?.['sovern:impact'],
+        urgency: node.metadata?.['sovern:urgency'],
+        created: node.metadata?.['sovern:created'],
+        feedback: node.metadata?.['feedback'],
+        color: node.color,
+      },
+    };
+  });
 
   const edges: Edge[] = canvas.edges.map((edge) => ({
     id: edge.id,

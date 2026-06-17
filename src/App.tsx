@@ -20,8 +20,10 @@ import { useWorkflowStore, ViewMode } from './store/useWorkflowStore';
 import { selectVisibleNodes, selectVisibleEdges } from './store/useWorkflowStore';
 import { SOVERNNode } from './components/nodes/SOVERNNode';
 import { LaneNode } from './components/nodes/LaneNode';
+import { ShapeNode } from './components/nodes/ShapeNode';
 import { NodeSidebar } from './components/NodeSidebar';
 import { EditModeBanner } from './components/EditModeBanner';
+import { AiPromptBar } from './components/AiPromptBar';
 import { KanbanBoard } from './components/KanbanBoard';
 import { MatrixView } from './components/MatrixView';
 import { TimelineView } from './components/TimelineView';
@@ -34,6 +36,7 @@ import { SOVERNNodeData } from './types';
 const nodeTypes = {
   sovern: SOVERNNode,
   lane: LaneNode,
+  shape: ShapeNode,
 };
 
 const prdNodes: Node<SOVERNNodeData>[] = [
@@ -165,6 +168,7 @@ function Flow() {
   return (
     <div style={{ width: '100vw', height: '100vh', backgroundColor: 'var(--bg-canvas)', position: 'relative' }}>
       <EditModeBanner saveState={saveState} />
+      {!presentationMode && <AiPromptBar notify={notify} />}
       <ReactFlow
         nodes={visibleNodes}
         edges={visibleDisplayEdges}

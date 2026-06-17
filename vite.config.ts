@@ -72,6 +72,17 @@ export default defineConfig({
   server: {
     port: 1420,
     strictPort: true,
+    proxy: {
+      '/llm': {
+        target: process.env.SOVERN_LLM_GATEWAY ?? 'http://localhost:4001',
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/llm/, ''),
+        configure: (proxy) => {
+          const key = process.env.LITELLM_KEY;
+          if (key) proxy.on('proxyReq', (proxyReq) => proxyReq.setHeader('Authorization', `Bearer ${key}`));
+        },
+      },
+    },
   },
   // env vars starting with `VITE_` are exposed to the client
   envPrefix: ['VITE_', 'TAURI_'],
