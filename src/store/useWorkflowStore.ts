@@ -65,6 +65,7 @@ interface WorkflowState {
   copySubtree: (id: string) => void;
   pasteSubtree: (targetParentId?: string) => void;
   addGeneratedGraph: (newNodes: Node<SOVERNNodeData>[], newEdges: Edge[]) => void;
+  addImportedGraph: (newNodes: Node<SOVERNNodeData>[], newEdges: Edge[]) => void;
 }
 
 /**
@@ -287,6 +288,12 @@ export const useWorkflowStore = create<WorkflowState>()(
     get().enterEditMode();
     set({ nodes: [...get().nodes, ...newNodes], edges: [...get().edges, ...newEdges] });
     withoutHistory(() => get().autoLayout());
+  },
+  addImportedGraph: (newNodes, newEdges) => {
+    get().enterEditMode();
+    set({ nodes: [...get().nodes, ...newNodes], edges: [...get().edges, ...newEdges] });
+    // Imported diagrams carry real coordinates — recalc rollups but DON'T re-layout.
+    withoutHistory(() => get().recalculate());
   },
     }),
     {
