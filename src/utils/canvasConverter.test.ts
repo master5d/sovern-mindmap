@@ -41,4 +41,16 @@ describe('canvasConverter mm:shape', () => {
     expect(nodes[0].type).toBe('shape');
     expect(nodes[0].data.shape).toBe('decision');
   });
+
+  it('round-trips an extended shape (cylinder)', () => {
+    const node: Node<SOVERNNodeData> = {
+      id: 'db', type: 'shape', position: { x: 0, y: 0 },
+      data: { label: 'Users', layer: 'projects', status: 'idle', shape: 'cylinder' },
+    };
+    const c = toJSONCanvas([node], []);
+    expect(c.nodes[0].metadata?.['mm:shape']).toBe('cylinder');
+    const { nodes } = fromJSONCanvas(c);
+    expect(nodes[0].type).toBe('shape');
+    expect(nodes[0].data.shape).toBe('cylinder');
+  });
 });
