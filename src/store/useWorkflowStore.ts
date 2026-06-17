@@ -58,6 +58,7 @@ interface WorkflowState {
   clipboard: { nodes: Node<SOVERNNodeData>[]; edges: Edge[]; rootId: string } | null;
   copySubtree: (id: string) => void;
   pasteSubtree: (targetParentId?: string) => void;
+  addGeneratedGraph: (newNodes: Node<SOVERNNodeData>[], newEdges: Edge[]) => void;
 }
 
 /**
@@ -266,6 +267,11 @@ export const useWorkflowStore = create<WorkflowState>()(
     // refresh clipboard with new ids so a subsequent paste won't collide
     get().copySubtree(seed.rootId);
     withoutHistory(() => get().autoLayout());
+  },
+  addGeneratedGraph: (newNodes, newEdges) => {
+    get().enterEditMode();
+    set({ nodes: [...get().nodes, ...newNodes], edges: [...get().edges, ...newEdges] });
+    get().autoLayout();
   },
     }),
     {
