@@ -11,7 +11,7 @@ import {
   MarkerType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { RefreshCcw, Save, FolderOpen, History, Zap, Grid2X2, Network, CalendarRange, Columns2, Workflow, ListTree, Rows3, Eye, EyeOff, ImageDown, GraduationCap, Code2, FileDown } from 'lucide-react';
+import { RefreshCcw, Save, FolderOpen, History, Zap, Grid2X2, Network, CalendarRange, Columns2, Workflow, ListTree, Rows3, Eye, EyeOff, ImageDown, GraduationCap, Code2, FileDown, Presentation } from 'lucide-react';
 
 import { ThemeSwitcher } from './components/ThemeSwitcher';
 import { TokenUpload } from './components/TokenUpload';
@@ -34,6 +34,7 @@ import { useAutosave } from './hooks/useAutosave';
 import { exportCanvasPng, exportDomViewPng } from './utils/exportPng';
 import { exportHtml } from './export/exportHtml';
 import { exportDrawio } from './drawio/exportDrawio';
+import { exportLearnHtml } from './export/exportLearnHtml';
 import { useGraphKeyboard } from './hooks/useGraphKeyboard';
 import { SOVERNNodeData } from './types';
 
@@ -150,6 +151,17 @@ function Flow() {
       await exportDrawio(nodes.filter((n) => n.type !== 'lane'), edges, { notify });
     } finally {
       setExportingDrawio(false);
+    }
+  };
+
+  const [exportingLearn, setExportingLearn] = useState(false);
+  const onExportLearn = async () => {
+    if (exportingLearn) return;
+    setExportingLearn(true);
+    try {
+      await exportLearnHtml(nodes.filter((n) => n.type !== 'lane'), edges, { notify });
+    } finally {
+      setExportingLearn(false);
     }
   };
 
@@ -305,6 +317,9 @@ function Flow() {
             )}
             {isCanvasView && (
               <button onClick={onExportDrawio} disabled={exportingDrawio} title="Export .drawio" className="p-2.5 text-secondary hover:text-accent disabled:opacity-40"><FileDown size={18} /></button>
+            )}
+            {isCanvasView && (
+              <button onClick={onExportLearn} disabled={exportingLearn} title="Export Learn HTML" className="p-2.5 text-secondary hover:text-accent disabled:opacity-40"><Presentation size={18} /></button>
             )}
           </div>
           <button onClick={recalculate} className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-hover text-secondary hover:bg-primary hover:text-canvas transition-all shadow-inner">
