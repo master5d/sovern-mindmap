@@ -10,9 +10,13 @@ export function AiPromptBar({ notify }: { notify: (msg: string) => void }) {
     const text = prompt.trim();
     if (!text || busy) return;
     setBusy(true);
-    await generateDiagram(text, { onError: (m) => notify(`⚠ diagram: ${m}`) });
-    setBusy(false);
-    setPrompt('');
+    let failed = false;
+    try {
+      await generateDiagram(text, { onError: (m) => { failed = true; notify(`⚠ diagram: ${m}`); } });
+    } finally {
+      setBusy(false);
+    }
+    if (!failed) setPrompt(''); // keep the user's text if generation failed
   };
 
   return (
