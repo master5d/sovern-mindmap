@@ -11,19 +11,20 @@ import {
   MarkerType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { RefreshCcw, Save, FolderOpen, History, Zap, Grid2X2, Network, CalendarRange, Columns2, Workflow, ListTree, Rows3, Eye, EyeOff, ImageDown } from 'lucide-react';
+import { RefreshCcw, Save, FolderOpen, History, Zap, Grid2X2, Network, CalendarRange, Columns2, Workflow, ListTree, Rows3, Eye, EyeOff, ImageDown, GraduationCap } from 'lucide-react';
 
 import { ThemeSwitcher } from './components/ThemeSwitcher';
 import { TokenUpload } from './components/TokenUpload';
 import { useThemeStore } from './store/useThemeStore';
 import { useWorkflowStore, ViewMode } from './store/useWorkflowStore';
-import { selectVisibleNodes, selectVisibleEdges } from './store/useWorkflowStore';
+import { selectVisibleNodes, selectVisibleEdges, selectLearnOrder, selectVisibleUpToStep } from './store/useWorkflowStore';
 import { SOVERNNode } from './components/nodes/SOVERNNode';
 import { LaneNode } from './components/nodes/LaneNode';
 import { ShapeNode } from './components/nodes/ShapeNode';
 import { NodeSidebar } from './components/NodeSidebar';
 import { EditModeBanner } from './components/EditModeBanner';
 import { AiPromptBar } from './components/AiPromptBar';
+import { LearnControls } from './components/LearnControls';
 import { KanbanBoard } from './components/KanbanBoard';
 import { MatrixView } from './components/MatrixView';
 import { TimelineView } from './components/TimelineView';
@@ -84,6 +85,7 @@ function Flow() {
     setNodes, setEdges, recalculate, selectedNodeId,
     viewMode, setViewMode, isSyncing,
     diagramLayout, setDiagramLayout, presentationMode, setPresentationMode,
+    learnMode, enterLearnMode, learnStep,
   } = useWorkflowStore();
 
   const resolved = useThemeStore((s) => s.resolved);
@@ -148,6 +150,13 @@ function Flow() {
     return () => clearTimeout(t);
   }, [viewMode, diagramLayout, fitView]);
 
+  // Learn mode: keep the growing picture framed as each step is revealed.
+  useEffect(() => {
+    if (!learnMode) return;
+    const t = setTimeout(() => fitView({ padding: 0.2, duration: 350 }), 60);
+    return () => clearTimeout(t);
+  }, [learnMode, learnStep, fitView]);
+
   const isCanvasView = viewMode === 'mindmap' || viewMode === 'diagram';
   useGraphKeyboard(isCanvasView);
   const displayEdges = !isCanvasView
@@ -165,18 +174,35 @@ function Flow() {
   const visibleNodes = selectVisibleNodes({ nodes, edges, collapsedIds });
   const visibleDisplayEdges = selectVisibleEdges({ nodes, edges: displayEdges, collapsedIds });
 
+  const learn = learnMode ? selectLearnOrder({ nodes, edges }) : null;
+  const learnVisible = learn ? selectVisibleUpToStep(learn.order, learnStep) : null;
+  const currentLearnId = learn ? learn.order[Math.min(learnStep, learn.total) - 1] : null;
+
+  const renderNodes = learnVisible
+    ? visibleNodes.map((nd) =>
+        learnVisible.has(nd.id)
+          ? { ...nd, data: { ...nd.data, __current: nd.id === currentLearnId } }
+          : { ...nd, hidden: true },
+      )
+    : visibleNodes;
+  const renderEdges = learnVisible
+    ? visibleDisplayEdges.map((e) =>
+        learnVisible.has(e.source) && learnVisible.has(e.target) ? e : { ...e, hidden: true },
+      )
+    : visibleDisplayEdges;
+
   return (
     <div style={{ width: '100vw', height: '100vh', backgroundColor: 'var(--bg-canvas)', position: 'relative' }}>
       <EditModeBanner saveState={saveState} />
-      {!presentationMode && <AiPromptBar notify={notify} />}
+      {!presentationMode && !learnMode && <AiPromptBar notify={notify} />}
       <ReactFlow
-        nodes={visibleNodes}
-        edges={visibleDisplayEdges}
+        nodes={renderNodes}
+        edges={renderEdges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         nodeTypes={nodeTypes as any}
-        nodesDraggable={viewMode !== 'diagram'}
+        nodesDraggable={viewMode !== 'diagram' && !learnMode}
         fitView
         minZoom={0.05}
         colorMode={resolved}
@@ -190,8 +216,8 @@ function Flow() {
       {viewMode === 'matrix' && <MatrixView />}
       {viewMode === 'timeline' && <TimelineView />}
 
-      {/* Header — вне ReactFlow, виден во всех режимах (кроме presentation) */}
-      {!presentationMode && (
+      {/* Header — вне ReactFlow, виден во всех режимах (кроме presentation / learn) */}
+      {!presentationMode && !learnMode && (
         <div className="absolute top-6 left-6 z-20 bg-surface/80 backdrop-blur-xl p-5 border border-edge rounded-2xl shadow-2xl">
           <div className="flex items-center space-x-4">
             <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center relative">
@@ -209,8 +235,8 @@ function Flow() {
         </div>
       )}
 
-      {/* Toolbar — вне ReactFlow, виден во всех режимах (кроме presentation) */}
-      {!presentationMode && (
+      {/* Toolbar — вне ReactFlow, виден во всех режимах (кроме presentation / learn) */}
+      {!presentationMode && !learnMode && (
         <div className="absolute bottom-6 right-6 z-20 bg-surface/90 backdrop-blur-md p-2.5 border border-edge rounded-2xl shadow-2xl flex space-x-3 items-center">
           <ThemeSwitcher />
           <TokenUpload notify={notify} />
@@ -225,6 +251,14 @@ function Flow() {
                 <Icon size={18} />
               </button>
             ))}
+            <button
+              onClick={enterLearnMode}
+              disabled={!isCanvasView || nodes.length === 0}
+              title="Learn mode (step-through)"
+              className="p-2.5 rounded-xl text-secondary hover:bg-hover disabled:opacity-30"
+            >
+              <GraduationCap size={18} />
+            </button>
           </div>
           <div className="flex space-x-1.5 px-2 border-r border-edge">
             <button onClick={loadFromFile} title="Load canvas" className="p-2.5 text-secondary hover:text-orange-400"><FolderOpen size={18} /></button>
@@ -239,7 +273,7 @@ function Flow() {
         </div>
       )}
 
-      {viewMode === 'diagram' && !presentationMode && (
+      {viewMode === 'diagram' && !presentationMode && !learnMode && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 bg-surface/90 backdrop-blur-md p-2 border border-edge rounded-2xl shadow-2xl flex space-x-1.5">
           <button
             onClick={() => setDiagramLayout('tree')}
@@ -274,7 +308,8 @@ function Flow() {
         </button>
       )}
 
-      {selectedNodeId && <NodeSidebar />}
+      {selectedNodeId && !learnMode && <NodeSidebar />}
+      {learnMode && <LearnControls />}
       {notice && (
         <div className="absolute bottom-24 right-6 z-30 bg-surface border border-edge text-primary text-xs px-4 py-2.5 rounded-xl shadow-2xl">
           {notice}
