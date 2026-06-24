@@ -1,5 +1,6 @@
 import { useWorkflowStore } from '../store/useWorkflowStore';
 import { X, Save, Trash2, Calendar, DollarSign, Target, Zap } from 'lucide-react';
+import { ShapePicker } from './ShapePicker';
 
 export const NodeSidebar = () => {
   const { nodes, selectedNodeId, updateNodeData, setSelectedNode } = useWorkflowStore();
@@ -52,6 +53,12 @@ export const NodeSidebar = () => {
             onChange={(e) => handleChange('label', e.target.value)}
             className="w-full bg-surface-2 border border-edge rounded-xl px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-accent transition-colors"
           />
+        </div>
+
+        {/* Shape */}
+        <div className="space-y-2">
+          <label className="text-[10px] font-black uppercase text-muted tracking-widest">Shape</label>
+          <ShapePicker />
         </div>
 
         {/* Grid: Layer & Status */}
