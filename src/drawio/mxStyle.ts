@@ -1,13 +1,15 @@
 import { ShapeKind, SHAPE_KINDS } from '../types';
 
 /**
- * Best-effort map of a drawio `style` string to one of our 12 shapes.
+ * Best-effort map of a drawio `style` string to one of our `SHAPE_KINDS`.
  * First match wins; anything unrecognized falls back to `rectangle`.
  */
 /**
- * Inverse of mapDrawioStyleToShape: each of our 12 shapes → a representative drawio style.
+ * Inverse of mapDrawioStyleToShape: each of our `SHAPE_KINDS` → a representative drawio style.
  * The Record type forces all SHAPE_KINDS to be covered (compile-time drift guard), and the
- * chosen styles satisfy mapDrawioStyleToShape(mapShapeToDrawioStyle(s)) === s.
+ * chosen styles satisfy mapDrawioStyleToShape(mapShapeToDrawioStyle(s)) === s. The home-lab
+ * icon shapes have no native drawio equivalent: they degrade to a rounded rect visually and
+ * carry their identity in a `mmShape=<kind>` marker that mapDrawioStyleToShape parses first.
  */
 const SHAPE_STYLE: Record<ShapeKind, string> = {
   rectangle: 'whiteSpace=wrap;html=1;',
