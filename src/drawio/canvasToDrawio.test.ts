@@ -64,4 +64,13 @@ describe('canvasToDrawio', () => {
     expect(canvas.edges).toHaveLength(1);
     expect(canvas.edges[0]).toMatchObject({ fromNode: 'a', toNode: 'b', label: 'save' });
   });
+
+  it('preserves an icon-pack shape (gpu) through export ↔ import', async () => {
+    const nodes = [{
+      id: 'g', type: 'shape', position: { x: 0, y: 0 }, measured: { width: 120, height: 60 },
+      data: { label: 'GPU node', layer: 'hosting', status: 'idle', shape: 'gpu' },
+    }];
+    const canvas = drawioToCanvas(await extractMxGraphModel(canvasToDrawio(nodes as any, [])));
+    expect(canvas.nodes.find((n) => n.id === 'g')!.metadata!['mm:shape']).toBe('gpu');
+  });
 });
