@@ -37,8 +37,12 @@ export const SHAPE_KINDS = [
 ] as const;
 export type ShapeKind = (typeof SHAPE_KINDS)[number];
 
-/** Shape kind → human label: hyphens→spaces, sentence-case. e.g. 'vector-store' → 'Vector store'. */
+/** Shape kinds rendered as all-caps acronyms rather than sentence-case. */
+const SHAPE_ACRONYMS = new Set<ShapeKind>(['gpu', 'aws', 'gcp']);
+
+/** Shape kind → human label: acronyms upper-cased; otherwise hyphens→spaces + sentence-case. e.g. 'aws'→'AWS', 'vector-store'→'Vector store'. */
 export function humanizeShape(kind: ShapeKind): string {
+  if (SHAPE_ACRONYMS.has(kind)) return kind.toUpperCase();
   const s = kind.replace(/-/g, ' ');
   return s.charAt(0).toUpperCase() + s.slice(1);
 }

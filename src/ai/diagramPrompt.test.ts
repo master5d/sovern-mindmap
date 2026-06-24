@@ -38,4 +38,11 @@ describe('buildDiagramMessages', () => {
     // Scope guard so these don't leak into ordinary business flowcharts.
     expect(sys).toContain('Home AI-lab infrastructure');
   });
+
+  it('documents the cloud-provider shapes and guards their scope', () => {
+    const sys = buildDiagramMessages('x')[0].content;
+    for (const kind of ['aws', 'azure', 'gcp']) expect(sys).toContain(kind);
+    // Scope guard so cloud marks don't leak into ordinary/home-lab diagrams.
+    expect(sys).toContain('Cloud providers');
+  });
 });
