@@ -15,6 +15,7 @@ import '@xyflow/react/dist/style.css';
 import { RefreshCcw, Save, FolderOpen, History, Zap, Grid2X2, Network, CalendarRange, Columns2, Workflow, ListTree, Rows3, Eye, EyeOff, ImageDown, GraduationCap, Code2, FileDown, Presentation, AlignLeft } from 'lucide-react';
 
 import { ThemeSwitcher } from './components/ThemeSwitcher';
+import { ReadingToggle } from './components/ReadingToggle';
 import { TokenUpload } from './components/TokenUpload';
 import { useThemeStore } from './store/useThemeStore';
 import { useWorkflowStore, ViewMode } from './store/useWorkflowStore';
@@ -316,6 +317,7 @@ function Flow() {
       {!presentationMode && !learnMode && (
         <div className="absolute bottom-6 right-6 z-20 bg-surface/90 backdrop-blur-md p-2.5 border border-edge rounded-2xl shadow-2xl flex space-x-3 items-center">
           <ThemeSwitcher />
+          <ReadingToggle />
           <TokenUpload notify={notify} />
           <div className="flex space-x-1.5 px-2 border-r border-edge">
             {VIEW_BUTTONS.map(({ mode, Icon, active }) => (
