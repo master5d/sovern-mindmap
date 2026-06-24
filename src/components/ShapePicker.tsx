@@ -5,7 +5,8 @@ import { ShapeSwatch } from './nodes/ShapeSwatch';
 /** Two enum-derived groups so the palette can never drift from SHAPE_KINDS. */
 export const SHAPE_GROUPS: { label: string; kinds: ShapeKind[] }[] = [
   { label: 'Basic', kinds: SHAPE_KINDS.slice(0, 12) as ShapeKind[] },
-  { label: 'Home AI-lab', kinds: SHAPE_KINDS.slice(12) as ShapeKind[] },
+  { label: 'Home AI-lab', kinds: SHAPE_KINDS.slice(12, 26) as ShapeKind[] },
+  { label: 'Cloud', kinds: SHAPE_KINDS.slice(26) as ShapeKind[] },
 ];
 
 /** Shape palette for the selected node; clicking a swatch converts it to that shape. */

@@ -32,6 +32,8 @@ export const SHAPE_KINDS = [
   'server', 'gpu', 'workstation', 'laptop', 'storage',
   'router', 'switch', 'firewall', 'wifi',
   'model', 'agent', 'vector-store', 'gateway', 'container',
+  // cloud providers (slice 11)
+  'aws', 'azure', 'gcp',
 ] as const;
 export type ShapeKind = (typeof SHAPE_KINDS)[number];
 

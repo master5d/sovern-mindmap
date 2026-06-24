@@ -28,18 +28,19 @@ beforeEach(() => {
 });
 
 describe('SHAPE_GROUPS', () => {
-  it('splits SHAPE_KINDS into Basic (12) + Home AI-lab (14), covering all', () => {
-    expect(SHAPE_GROUPS.map((g) => g.label)).toEqual(['Basic', 'Home AI-lab']);
+  it('splits SHAPE_KINDS into Basic (12) + Home AI-lab (14) + Cloud (3), covering all', () => {
+    expect(SHAPE_GROUPS.map((g) => g.label)).toEqual(['Basic', 'Home AI-lab', 'Cloud']);
     expect(SHAPE_GROUPS[0].kinds.length).toBe(12);
     expect(SHAPE_GROUPS[1].kinds.length).toBe(14);
-    expect([...SHAPE_GROUPS[0].kinds, ...SHAPE_GROUPS[1].kinds]).toEqual([...SHAPE_KINDS]);
+    expect(SHAPE_GROUPS[2].kinds.length).toBe(3);
+    expect([...SHAPE_GROUPS[0].kinds, ...SHAPE_GROUPS[1].kinds, ...SHAPE_GROUPS[2].kinds]).toEqual([...SHAPE_KINDS]);
   });
 });
 
 describe('ShapePicker', () => {
-  it('renders one labelled button per shape (26 total)', () => {
+  it('renders one labelled button per shape (29 total)', () => {
     const { container, cleanup } = mount(<ShapePicker />);
-    expect(container.querySelectorAll('button[aria-label]').length).toBe(26);
+    expect(container.querySelectorAll('button[aria-label]').length).toBe(29);
     cleanup();
   });
 

@@ -40,6 +40,11 @@ Home AI-lab infrastructure (use ONLY when the diagram is about computers, networ
 - gateway = an API gateway or proxy (e.g. LiteLLM)
 - container = a Docker container or service
 
+Cloud providers (use ONLY when the diagram explicitly refers to a public cloud service):
+- aws = Amazon Web Services
+- azure = Microsoft Azure
+- gcp = Google Cloud Platform
+
 Optionally, to make the diagram a guided walkthrough, add to a node's "metadata":
 - "mm:step": a 1-based integer giving the order in which this node should be revealed
 - "mm:note": one short sentence explaining this node, shown when it is the current step

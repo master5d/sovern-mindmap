@@ -38,6 +38,9 @@ const SHAPE_STYLE: Record<ShapeKind, string> = {
   'vector-store': 'rounded=1;whiteSpace=wrap;html=1;mmShape=vector-store;',
   gateway: 'rounded=1;whiteSpace=wrap;html=1;mmShape=gateway;',
   container: 'rounded=1;whiteSpace=wrap;html=1;mmShape=container;',
+  aws: 'rounded=1;whiteSpace=wrap;html=1;mmShape=aws;',
+  azure: 'rounded=1;whiteSpace=wrap;html=1;mmShape=azure;',
+  gcp: 'rounded=1;whiteSpace=wrap;html=1;mmShape=gcp;',
 };
 
 export function mapShapeToDrawioStyle(shape: ShapeKind): string {
