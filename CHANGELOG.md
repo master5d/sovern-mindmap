@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.0.0-alpha.8] - 2026-06-23
+
+### 🚀 Added — Home AI-lab shape pack (slice 8) + manual shape picker (slice 9)
+- **Home AI-lab shape pack (slice 8):** +14 `icon`-mode shapes on top of the original 12 (vocabulary now **26**) — compute (`server` · `gpu` · `workstation` · `laptop` · `storage`), networking (`router` · `switch` · `firewall` · `wifi`) and ML-software (`model` · `agent` · `vector-store` · `gateway` · `container`), rendered via the existing lucide `icon` mode (no `ShapeNode` change). The generation prompt gains a **scope-guarded** "Home AI-lab infrastructure" section + a home-lab few-shot so the AI uses them only for compute/network/ML diagrams, never ordinary flowcharts. `.drawio` round-trip preserves the new shapes via an `mmShape=<kind>` style marker (foreign drawio degrades to a rounded rect). Public-cloud icon sets (AWS/Azure/GCP) deliberately out of scope — the project serves a home lab.
+- **Manual shape picker (slice 9):** select a node → a **Shape palette** appears in the sidebar (26 swatches in *Basic* / *Home AI-lab* groups, driven by the same `SHAPE_GEOMETRY` registry). Clicking a swatch converts the node to that diagram shape — a new `setNodeShape` store action flips the React Flow `type` to `shape` and sets `data.shape` in **one undoable step** (enters Edit Mode to freeze the live poll; node data is merged, not replaced; round-trips via `mm:shape`). Closes the gap where hand-authored nodes were stuck as rectangles. Drag-from-library node creation remains a future slice.
+
+### 🧪 Tests
+- Component render tests run on React 19's built-in `act` + `react-dom/client` (no `@testing-library` dependency); `vitest` `include` widened to `*.test.{ts,tsx}`. Full suite **154** tests green; `prompt → home-lab diagram` verified live against the real LiteLLM gateway, and the picker verified live (render → convert → single-undo revert).
+
 ## [v1.0.0-alpha.7] - 2026-06-17
 
 ### 🚀 Added — Export suite (slices 5–7)

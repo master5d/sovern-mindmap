@@ -33,12 +33,15 @@ The app boots as a **viewer** of the live board; the first hand-edit enters **Ed
 *   **⌨️ Keyboard authoring:** `Tab` = child, `Enter` = sibling, `F2` / double-click = rename, `Delete` = cascade-delete, `Esc` = clear.
 *   **↩️ Undo / Redo:** `Ctrl+Z` / `Ctrl+Y` (zundo) — one step per structural edit; React-Flow churn never pollutes history.
 *   **✏️ Inline editing** on the node itself, **fold/collapse** subtrees (+N badge), and **copy/paste** subtree (`Ctrl+C` / `Ctrl+V`, fresh ids).
+*   **🔷 Shape picker:** select a node → pick from the 26-shape palette in the sidebar (Basic / Home AI-lab groups); the node converts to that diagram shape in **one undo step** (works on any node, including hand-authored ones).
 *   **💾 Autosave** to a *separate workspace file* (Tauri app-data / browser `localStorage`) — **never** writes `board.canvas`.
 
 ### 5. AI Canvas (prompt → diagram)
 Describe a diagram in the prompt bar and an **editable** one appears on the same canvas — no separate tool windows. *Tools are invisible backends; the canvas is the single surface.*
 *   **🪄 Generation:** prompt → LiteLLM gateway (dev-proxied at `/llm`; the key is injected **server-side** and never reaches the client bundle) → output normalized/repaired by `extractCanvas` → native **JSON Canvas** interchange (not Mermaid) → appended as **one undoable** Edit-Mode edit with dagre layout.
-*   **🔷 12 shapes:** rectangle · rounded · decision · terminal · note · cylinder (datastore) · ellipse · parallelogram (I/O) · hexagon · cloud (service) · actor (user) · document — one `SHAPE_KINDS` source of truth, rendered via the `shapeGeometry` registry.
+*   **🔷 26 shapes** (one `SHAPE_KINDS` source of truth, rendered via the `shapeGeometry` registry):
+    *   **Basic (12):** rectangle · rounded · decision · terminal · note · cylinder (datastore) · ellipse · parallelogram (I/O) · hexagon · cloud (service) · actor (user) · document.
+    *   **Home AI-lab pack (14):** server · gpu · workstation · laptop · storage · router · switch · firewall · wifi · model · agent · vector-store · gateway · container — lucide-icon shapes for diagramming a home AI lab (compute / networking / ML stack). The generation prompt has a scope-guard so they don't leak into ordinary flowcharts.
 *   Needs the LiteLLM gateway running (canonical port in `NAUTILUS/config/services.json`; the proxy defaults to `:4001`, override with `SOVERN_LLM_GATEWAY`).
 
 ### 6. Learn Mode (step-through walkthroughs)
@@ -47,7 +50,7 @@ Turn any diagram into a **cumulative, self-paced walkthrough** — built for non
 *   **🗣️ Per-step narration:** step order and a sentence of narration ride inside the node as `mm:step` / `mm:note` (carried through JSON Canvas like `mm:shape`); the AI generator fills them, otherwise the order falls back to a deterministic BFS from the graph roots.
 
 ### 7. Import & Export (draw.io interop + shareable artifacts)
-*   **📥 Import `.drawio`:** load an existing draw.io file (compressed or "Edit Diagram" XML) — vertices, edges, labels and **real coordinates** are mapped onto the canvas; shapes best-effort-mapped to the 12-shape vocabulary. Native `DOMParser` + `DecompressionStream` (no dependency).
+*   **📥 Import `.drawio`:** load an existing draw.io file (compressed or "Edit Diagram" XML) — vertices, edges, labels and **real coordinates** are mapped onto the canvas; shapes best-effort-mapped to the shape vocabulary. Native `DOMParser` + `DecompressionStream` (no dependency).
 *   **📤 Export `.drawio`:** serialize the canvas back to mxGraph XML — opens editable in real draw.io. The import↔export round-trip is proven by an integration test and verified in real draw.io.
 *   **🖼️ Export PNG / 🌐 Export HTML:** a one-file interactive HTML (pan/zoom + dark/light toggle, captured in both themes) — a shareable diagram, no app or server needed.
 *   **🎬 Export Learn HTML:** bake the **Learn-mode walkthrough** into a single self-contained `.html` (cumulative frames + narration + prev/next on a neutral background that reads on light and dark pages) — drop it into an `<iframe>` to embed a step-through in an LMS/course unit; it keeps working even if this app goes away.
