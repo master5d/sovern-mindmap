@@ -14,8 +14,13 @@ clarity-first ethos; composes with dark/light and design tokens.
 ## Decisions (locked in brainstorming)
 
 - **Shape:** one bundled **Reading Mode** toggle (not granular knobs, not font-only).
-- **Font:** **Atkinson Hyperlegible** (Braille Institute, SIL OFL) — maximal letter
-  distinction, clean, broadly legible. Vendored as **woff2** (no CDN at runtime).
+- **Font:** **OpenDyslexic** (SIL OFL) — the canonical dyslexia font (weighted
+  letter bottoms, wider spacing), and crucially it ships **both Latin AND
+  Cyrillic** (verified: U+0410 А and U+0041 A both in the cmap, 1586 glyphs), so
+  the operator's bilingual RU/EN content gets a consistent dyslexia font.
+  (Atkinson Hyperlegible was the first pick but is Latin-only — no Cyrillic
+  subset — so it was rejected for this bilingual app.) Vendored as **woff2** (no
+  CDN at runtime).
 - **Mechanism:** an orthogonal `data-reading` attribute on `<html>`, set the same
   way as `data-theme`, restyled by CSS variables — composes with any theme.
 
@@ -51,19 +56,20 @@ interface ThemeState {
 
 ### Vendored font
 
-- `src/assets/fonts/atkinson-hyperlegible-latin-400-normal.woff2` (Regular) and
-  `…-700-normal.woff2` (Bold), plus `src/assets/fonts/OFL.txt` (the SIL Open Font
-  License). Sourced at setup time from the Fontsource package files
-  (`cdn.jsdelivr.net/npm/@fontsource/atkinson-hyperlegible/files/…` and
-  `/LICENSE`) and **committed** — no runtime CDN, no npm dependency.
+- `src/assets/fonts/OpenDyslexic-Regular.woff2` (400) and `OpenDyslexic-Bold.woff2`
+  (700), plus `src/assets/fonts/OFL.txt` (the SIL Open Font License). Sourced at
+  setup time from the official OpenDyslexic repo's compiled files
+  (`cdn.jsdelivr.net/gh/antijingoist/opendyslexic/compiled/…` and `/OFL.txt`) and
+  **committed** — no runtime CDN, no npm dependency. (~115 KB Regular — heavier
+  than a Latin subset, but it carries full Latin+Cyrillic coverage.)
 
 ### `src/theme/reading.css` (new), `@import`ed by `index.css` after `tokens.css`
 
-- Two `@font-face` declarations (400/700) pointing at the vendored woff2
-  (`font-display: swap`); Vite bundles the assets.
+- Two `@font-face` declarations (`OpenDyslexic` 400/700) pointing at the vendored
+  woff2 (`font-display: swap`); Vite bundles the assets.
 - A `[data-reading='on']` block (composes on top of either `data-theme`):
   - `body { font-family: var(--font-reading); line-height: 1.7; letter-spacing: 0.012em; }`
-    where `--font-reading: 'Atkinson Hyperlegible', ui-sans-serif, system-ui, sans-serif`.
+    where `--font-reading: 'OpenDyslexic', ui-sans-serif, system-ui, sans-serif`.
   - calmer canvas: lower `--grid-opacity` (dark `0.3 → 0.15`, light `0.6 → 0.3`).
   - motion off: `[data-reading='on'] *, [data-reading='on'] *::before, [data-reading='on'] *::after { animation: none !important; transition: none !important; }`.
 - An always-on a11y baseline (independent of the toggle):
@@ -120,7 +126,7 @@ node positions do not move. Accepted.
 ## Files
 
 - **Create:** `src/theme/reading.css`
-- **Create:** `src/assets/fonts/atkinson-hyperlegible-latin-400-normal.woff2`, `…-700-normal.woff2`, `OFL.txt`
+- **Create:** `src/assets/fonts/OpenDyslexic-Regular.woff2`, `OpenDyslexic-Bold.woff2`, `OFL.txt`
 - **Create:** `src/components/ReadingToggle.tsx` + `src/components/ReadingToggle.test.tsx`
 - **Modify:** `src/store/useThemeStore.ts` — `reading` state, `setReading`, persist, `initTheme` applies `data-reading`
 - **Modify:** `src/store/useThemeStore.test.ts` — reading + `data-reading` assertions
