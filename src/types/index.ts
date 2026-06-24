@@ -35,6 +35,12 @@ export const SHAPE_KINDS = [
 ] as const;
 export type ShapeKind = (typeof SHAPE_KINDS)[number];
 
+/** Shape kind → human label: hyphens→spaces, sentence-case. e.g. 'vector-store' → 'Vector store'. */
+export function humanizeShape(kind: ShapeKind): string {
+  const s = kind.replace(/-/g, ' ');
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 export interface SOVERNNodeData {
   label: string;
   layer: SOVERNLayer;
