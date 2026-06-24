@@ -261,7 +261,7 @@ export const useWorkflowStore = create<WorkflowState>()(
     set({ viewMode: mode });
     if (mode === 'mindmap') get().autoLayout();
     if (mode === 'diagram') get().applyDiagramLayout();
-    // matrix / timeline / kanban — DOM-вью, canvas-позиции не трогаем
+    // matrix / timeline / kanban / outline — DOM-вью, canvas-позиции не трогаем
   },
   setN8nWebhookUrl: (url) => set({ n8nWebhookUrl: url }),
   recalculate: () => {
