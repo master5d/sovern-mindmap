@@ -30,10 +30,35 @@ describe('initTheme', () => {
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
   });
 
-  it('persists mode only', () => {
+  it('persists mode and reading', () => {
     initTheme();
     useThemeStore.getState().setMode('light');
     const saved = JSON.parse(localStorage.getItem('sovern-theme')!);
-    expect(saved.state).toEqual({ mode: 'light' });
+    expect(saved.state).toEqual({ mode: 'light', reading: false });
+  });
+});
+
+describe('reading mode', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    document.documentElement.removeAttribute('data-reading');
+    useThemeStore.setState({ mode: 'system', resolved: 'dark', reading: false });
+  });
+
+  it('defaults to off and toggles via setReading', () => {
+    expect(useThemeStore.getState().reading).toBe(false);
+    useThemeStore.getState().setReading(true);
+    expect(useThemeStore.getState().reading).toBe(true);
+    useThemeStore.getState().setReading(false);
+    expect(useThemeStore.getState().reading).toBe(false);
+  });
+
+  it('initTheme applies data-reading and reacts to setReading', () => {
+    initTheme();
+    expect(document.documentElement.getAttribute('data-reading')).toBe('off');
+    useThemeStore.getState().setReading(true);
+    expect(document.documentElement.getAttribute('data-reading')).toBe('on');
+    useThemeStore.getState().setReading(false);
+    expect(document.documentElement.getAttribute('data-reading')).toBe('off');
   });
 });

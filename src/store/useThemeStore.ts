@@ -15,7 +15,9 @@ const systemDark = (): boolean =>
 interface ThemeState {
   mode: ThemeMode;
   resolved: ResolvedTheme;
+  reading: boolean;
   setMode: (mode: ThemeMode) => void;
+  setReading: (on: boolean) => void;
   syncSystem: () => void;
 }
 
@@ -24,22 +26,26 @@ export const useThemeStore = create<ThemeState>()(
     (set, get) => ({
       mode: 'system',
       resolved: resolveTheme('system', systemDark()),
+      reading: false,
       setMode: (mode) => set({ mode, resolved: resolveTheme(mode, systemDark()) }),
+      setReading: (on) => set({ reading: on }),
       syncSystem: () => set({ resolved: resolveTheme(get().mode, systemDark()) }),
     }),
-    { name: 'sovern-theme', partialize: (s) => ({ mode: s.mode }) },
+    { name: 'sovern-theme', partialize: (s) => ({ mode: s.mode, reading: s.reading }) },
   ),
 );
 
 /** Вешает тему на <html> и слушает смену системной. Вызывать один раз из main.tsx. */
 export function initTheme() {
-  const apply = (resolved: ResolvedTheme) =>
-    document.documentElement.setAttribute('data-theme', resolved);
+  const apply = (s: ThemeState) => {
+    document.documentElement.setAttribute('data-theme', s.resolved);
+    document.documentElement.setAttribute('data-reading', s.reading ? 'on' : 'off');
+  };
 
-  useThemeStore.subscribe((s) => apply(s.resolved));
+  useThemeStore.subscribe(apply);
   // resolved мог устареть после rehydrate из localStorage — пересчитать
   useThemeStore.getState().syncSystem();
-  apply(useThemeStore.getState().resolved);
+  apply(useThemeStore.getState());
 
   window
     .matchMedia?.('(prefers-color-scheme: dark)')
