@@ -30,7 +30,8 @@ describe('ShapeSwatch', () => {
   it('renders a css-mode swatch (rounded) as a plain box with no svg', () => {
     const { container, cleanup } = mount(<ShapeSwatch kind="rounded" />);
     expect(container.querySelector('svg')).toBeNull();
-    expect(container.querySelector('div')).toBeTruthy();
+    // meaningful: the css-mode box carries the geometry's border-radius className
+    expect(container.firstElementChild?.className).toContain('rounded-xl');
     cleanup();
   });
 
