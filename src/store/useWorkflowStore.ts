@@ -11,7 +11,7 @@ import {
   applyNodeChanges,
   applyEdgeChanges,
 } from '@xyflow/react';
-import { SOVERNNodeData } from '../types';
+import { SOVERNNodeData, ShapeKind } from '../types';
 import { calculateBudgetRollup, calculateTimelineRollup } from '../utils/pmEngine';
 import { getClusteredElements, getTreeLayout, getLaneLayout } from '../utils/layout';
 import { getChildren, getDescendants, getParent, cloneSubtree } from '../utils/tree';
@@ -36,6 +36,7 @@ interface WorkflowState {
   setEdges: (edges: Edge[]) => void;
   setSelectedNode: (id: string | null) => void;
   updateNodeData: (id: string, data: Partial<SOVERNNodeData>) => void;
+  setNodeShape: (id: string, shape: ShapeKind) => void;
   addChildNode: (parentId: string) => string;
   addSiblingNode: (nodeId: string) => string;
   deleteNodeCascade: (nodeId: string) => void;
@@ -167,6 +168,16 @@ export const useWorkflowStore = create<WorkflowState>()(
     if (dataUpdate.status) {
       get().triggerWebhook(id, 'node.status_changed');
     }
+  },
+  setNodeShape: (id, shape) => {
+    get().enterEditMode(); // idempotent: freezes the live poll + resumes undo tracking
+    set({
+      nodes: get().nodes.map((n) =>
+        n.id === id ? { ...n, type: 'shape', data: { ...n.data, shape } } : n,
+      ),
+    });
+    // Re-rollup without a second undo entry — the type+shape flip above is the one step.
+    withoutHistory(() => get().recalculate());
   },
   addChildNode: (parentId) => {
     get().enterEditMode();
