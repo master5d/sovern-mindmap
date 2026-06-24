@@ -79,12 +79,16 @@ vector-store; GPU node"). The existing flowchart vocabulary and example are left
 
 ### 4. `src/drawio/mxStyle.ts` — round-trip (graceful degradation)
 drawio has no native equivalent for our icon shapes. Strategy: **degrade visually without losing
-semantics.**
-- **Export:** new shapes → a `rounded` rectangle mxStyle, while `mm:shape` rides along in the
-  cell metadata (the exporter already attaches sovern metadata). In foreign drawio the node shows
-  as a labeled rounded rectangle — readable.
-- **Import back into our app:** read `mm:shape` from metadata → the shape is restored 1:1. Full
-  round-trip fidelity is preserved within our own ecosystem.
+semantics, carried entirely in the style string.**
+- **Correction to an earlier assumption:** `canvasToDrawio.ts` does NOT attach sovern metadata to
+  cells — it serializes only the mapped `style`. So fidelity is carried by the style itself, not a
+  separate metadata attribute. This needs zero changes to `canvasToDrawio.ts` / `drawioToCanvas.ts`.
+- **Export:** new shapes → `rounded=1;whiteSpace=wrap;html=1;mmShape=<kind>;`. The `rounded=1`
+  makes foreign drawio render a labeled rounded rectangle; the `mmShape=<kind>` marker is an
+  unknown key foreign tools ignore.
+- **Import back into our app:** `mapDrawioStyleToShape` parses the `mmShape=` marker first (winning
+  over the `rounded=1` heuristic) and validates it against `SHAPE_KINDS` → shape restored 1:1.
+  Keeps the existing `mapDrawioStyleToShape(mapShapeToDrawioStyle(s)) === s` invariant test green.
 - Mapping to drawio's native network stencils (mxgraph/cisco) is **explicitly out of scope**,
   noted as future work.
 
