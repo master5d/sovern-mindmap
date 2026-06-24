@@ -25,4 +25,17 @@ describe('buildDiagramMessages', () => {
     expect(sys).toContain('mm:step');
     expect(sys).toContain('mm:note');
   });
+
+  it('documents the home AI-lab shapes and guards their scope', () => {
+    const sys = buildDiagramMessages('x')[0].content;
+    for (const kind of [
+      'server', 'gpu', 'workstation', 'laptop', 'storage',
+      'router', 'switch', 'firewall', 'wifi',
+      'model', 'agent', 'vector-store', 'gateway', 'container',
+    ]) {
+      expect(sys).toContain(kind);
+    }
+    // Scope guard so these don't leak into ordinary business flowcharts.
+    expect(sys).toContain('Home AI-lab infrastructure');
+  });
 });

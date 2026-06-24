@@ -28,6 +28,10 @@ export type NodeStatus = 'pending' | 'active' | 'done' | 'blocked' | 'idle';
 export const SHAPE_KINDS = [
   'rectangle', 'rounded', 'decision', 'terminal', 'note',
   'cylinder', 'ellipse', 'parallelogram', 'hexagon', 'cloud', 'actor', 'document',
+  // home AI-lab pack (slice 8)
+  'server', 'gpu', 'workstation', 'laptop', 'storage',
+  'router', 'switch', 'firewall', 'wifi',
+  'model', 'agent', 'vector-store', 'gateway', 'container',
 ] as const;
 export type ShapeKind = (typeof SHAPE_KINDS)[number];
 
