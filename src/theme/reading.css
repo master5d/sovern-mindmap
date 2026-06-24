@@ -1,0 +1,53 @@
+/* Reading Mode (neuro-inclusive preset) — orthogonal to data-theme.
+   Vendored OpenDyslexic (SIL OFL, Latin+Cyrillic); see assets/fonts/OFL.txt.
+   No runtime CDN. */
+
+@font-face {
+  font-family: 'OpenDyslexic';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../assets/fonts/OpenDyslexic-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'OpenDyslexic';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../assets/fonts/OpenDyslexic-Bold.woff2') format('woff2');
+}
+
+/* Calmer dot grid (cf. .react-flow__background opacity: var(--grid-opacity)).
+   1-attr selector ties with [data-theme='light']; the 2-attr rule below wins for light. */
+[data-reading='on'] {
+  --font-reading: 'OpenDyslexic', ui-sans-serif, system-ui, sans-serif;
+  --grid-opacity: 0.15;
+}
+[data-reading='on'][data-theme='light'] {
+  --grid-opacity: 0.3;
+}
+
+[data-reading='on'] body {
+  font-family: var(--font-reading);
+  line-height: 1.7;
+  letter-spacing: 0.012em;
+}
+
+/* Plain mode: stop decorative motion. */
+[data-reading='on'] *,
+[data-reading='on'] *::before,
+[data-reading='on'] *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* Always-on a11y baseline, independent of the toggle. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

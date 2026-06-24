@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import './theme/tokens.css';
+@import './theme/reading.css';
 
 @theme inline {
   --color-canvas: var(--bg-canvas);
