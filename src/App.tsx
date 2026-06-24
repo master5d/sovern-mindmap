@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import type React from 'react';
 import { useBoardSync } from './hooks/useBoardSync';
 import {
   ReactFlow,
@@ -26,6 +27,7 @@ import { EditModeBanner } from './components/EditModeBanner';
 import { AiPromptBar } from './components/AiPromptBar';
 import { LearnControls } from './components/LearnControls';
 import { DrawioImportButton } from './components/DrawioImportButton';
+import { ShapeLibrary, SHAPE_DND_MIME } from './components/ShapeLibrary';
 import { KanbanBoard } from './components/KanbanBoard';
 import { MatrixView } from './components/MatrixView';
 import { TimelineView } from './components/TimelineView';
@@ -36,7 +38,7 @@ import { exportHtml } from './export/exportHtml';
 import { exportDrawio } from './drawio/exportDrawio';
 import { exportLearnHtml } from './export/exportLearnHtml';
 import { useGraphKeyboard } from './hooks/useGraphKeyboard';
-import { SOVERNNodeData } from './types';
+import { SOVERNNodeData, SHAPE_KINDS, ShapeKind } from './types';
 
 const nodeTypes = {
   sovern: SOVERNNode,
@@ -93,12 +95,12 @@ function Flow() {
     setNodes, setEdges, recalculate, selectedNodeId,
     viewMode, setViewMode, isSyncing,
     diagramLayout, setDiagramLayout, presentationMode, setPresentationMode,
-    learnMode, enterLearnMode, learnStep,
+    learnMode, enterLearnMode, learnStep, addShapeNode,
   } = useWorkflowStore();
 
   const resolved = useThemeStore((s) => s.resolved);
   const { saveToFile, loadFromFile, loadWorkspace } = usePersistence();
-  const { fitView } = useReactFlow();
+  const { fitView, screenToFlowPosition } = useReactFlow();
   const initialized = useRef(false);
 
   const saveState = useAutosave();
@@ -239,6 +241,21 @@ function Flow() {
       )
     : visibleDisplayEdges;
 
+  // Drag-from-library: drop a shape swatch onto the MindMap canvas → standalone node at the cursor.
+  const onCanvasDragOver = (e: React.DragEvent) => {
+    if (viewMode !== 'mindmap' || learnMode || presentationMode) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+  const onCanvasDrop = (e: React.DragEvent) => {
+    if (viewMode !== 'mindmap' || learnMode || presentationMode) return;
+    e.preventDefault();
+    const kind = e.dataTransfer.getData(SHAPE_DND_MIME);
+    if (!SHAPE_KINDS.includes(kind as ShapeKind)) return; // ignore foreign drags
+    const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+    addShapeNode(kind as ShapeKind, position);
+  };
+
   return (
     <div style={{ width: '100vw', height: '100vh', backgroundColor: 'var(--bg-canvas)', position: 'relative' }}>
       <EditModeBanner saveState={saveState} />
@@ -249,6 +266,8 @@ function Flow() {
         onNodesChange={learnMode ? NOOP : onNodesChange}
         onEdgesChange={learnMode ? NOOP : onEdgesChange}
         onConnect={learnMode ? NOOP : onConnect}
+        onDragOver={onCanvasDragOver}
+        onDrop={onCanvasDrop}
         nodeTypes={nodeTypes as any}
         nodesDraggable={viewMode !== 'diagram' && !learnMode}
         elementsSelectable={!learnMode}
@@ -367,6 +386,7 @@ function Flow() {
         </button>
       )}
 
+      {viewMode === 'mindmap' && !presentationMode && !learnMode && <ShapeLibrary />}
       {selectedNodeId && !learnMode && <NodeSidebar />}
       {learnMode && <LearnControls />}
       {notice && (
