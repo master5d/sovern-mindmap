@@ -1,5 +1,8 @@
 import { ReactNode } from 'react';
-import { User, Cloud } from 'lucide-react';
+import {
+  User, Cloud, Server, CircuitBoard, Monitor, Laptop, HardDrive,
+  Router, Network, ShieldCheck, Wifi, BrainCircuit, Bot, Boxes, Webhook, Container,
+} from 'lucide-react';
 import { SOVERNNodeData } from '../../types';
 
 export type ShapeKind = NonNullable<SOVERNNodeData['shape']>;
@@ -45,4 +48,18 @@ export const SHAPE_GEOMETRY: Record<ShapeKind, ShapeRender> = {
   document: { mode: 'svg', svg: (s) => <Frame><path d="M5,8 H95 V82 q-22.5,14 -45,0 t-45,0 Z" style={strokeStyle(s)} /></Frame> },
   actor: { mode: 'icon', Icon: User, className: 'rounded-xl' },
   cloud: { mode: 'icon', Icon: Cloud, className: 'rounded-2xl' },
+  server: { mode: 'icon', Icon: Server, className: 'rounded-xl' },
+  gpu: { mode: 'icon', Icon: CircuitBoard, className: 'rounded-xl' },
+  workstation: { mode: 'icon', Icon: Monitor, className: 'rounded-xl' },
+  laptop: { mode: 'icon', Icon: Laptop, className: 'rounded-xl' },
+  storage: { mode: 'icon', Icon: HardDrive, className: 'rounded-xl' },
+  router: { mode: 'icon', Icon: Router, className: 'rounded-xl' },
+  switch: { mode: 'icon', Icon: Network, className: 'rounded-xl' },
+  firewall: { mode: 'icon', Icon: ShieldCheck, className: 'rounded-xl' },
+  wifi: { mode: 'icon', Icon: Wifi, className: 'rounded-xl' },
+  model: { mode: 'icon', Icon: BrainCircuit, className: 'rounded-xl' },
+  agent: { mode: 'icon', Icon: Bot, className: 'rounded-xl' },
+  'vector-store': { mode: 'icon', Icon: Boxes, className: 'rounded-xl' },
+  gateway: { mode: 'icon', Icon: Webhook, className: 'rounded-xl' },
+  container: { mode: 'icon', Icon: Container, className: 'rounded-xl' },
 };
