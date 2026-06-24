@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.0.0-alpha.12] - 2026-06-24
+
+### 🚀 Added — Reading Mode / neuro-inclusive preset (slice 14)
+- **Reading Mode:** a single toolbar toggle (📖, beside the theme switcher) that makes the whole app calmer and more legible — **orthogonal to dark/light**, persisted. It swaps in the **OpenDyslexic** font (dyslexia-specific weighted letter bottoms), opens up line-height/letter-spacing, softens the canvas dot grid, and stops decorative motion. Implemented like the theme system: a `reading` flag in the theme store drives a `data-reading` attribute on `<html>`, restyled by `reading.css` on top of any `data-theme`; an always-on `@media (prefers-reduced-motion: reduce)` baseline calms motion regardless of the toggle. The font is **vendored woff2** (no runtime CDN, no npm dependency) and — crucially for the bilingual RU/EN content — covers **both Latin and Cyrillic** (Atkinson Hyperlegible was the first pick but is Latin-only, so it was rejected). *Phase 1 of the Ayoa-inspired sovereign-canvas epic; for the operator's neurodivergent audience + clarity-first ethos.*
+
+### 🧪 Tests
+- Full suite **179** green; verified live (toggle → OpenDyslexic font app-wide including Russian node labels, line-height 1.7×, header animation stops, `data-reading='on'`; persists across reload; works on dark and light).
+
 ## [v1.0.0-alpha.11] - 2026-06-24
 
 ### 🚀 Added — Outline / Document view (slice 13)

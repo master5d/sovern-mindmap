@@ -27,6 +27,7 @@ Switch seamlessly between six analytical dimensions. The MindMap and Diagram are
 *   **Local-First & Obsidian Ready:** Native support for the `.canvas` format. Your "Control Plane" and "Second Brain" share a single source of truth.
 *   **mc_hub Feedback Bridge:** Dev server serves `/board.canvas` from the mc_hub triage pipeline (path via `SOVERN_BOARD` env), polls it every 3s, and writes status changes back through `fb.mjs` — the board is a live two-way window into `feedback.jsonl`.
 *   **🎨 Theming:** Dark (cyberpunk neon) / Light (clean professional) / System modes with persistence. Upload **W3C Design Tokens JSON** (Figma / Style Dictionary export) to re-skin the entire app — colors live in CSS custom properties.
+*   **📖 Reading Mode:** a one-click neuro-inclusive preset (orthogonal to dark/light) — swaps in the **OpenDyslexic** font (vendored, Latin **and** Cyrillic), opens up line/letter spacing, calms the canvas grid, and stops decorative motion (plus an always-on `prefers-reduced-motion` baseline). Persisted; no runtime CDN.
 *   **🖼️ PNG Export:** One click exports the full graph (fit-to-content) in canvas views or a snapshot of Kanban/Matrix/Timeline.
 
 ### 4. Hand Editing (Edit Mode)
