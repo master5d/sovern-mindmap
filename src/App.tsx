@@ -12,7 +12,7 @@ import {
   MarkerType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { RefreshCcw, Save, FolderOpen, History, Zap, Grid2X2, Network, CalendarRange, Columns2, Workflow, ListTree, Rows3, Eye, EyeOff, ImageDown, GraduationCap, Code2, FileDown, Presentation } from 'lucide-react';
+import { RefreshCcw, Save, FolderOpen, History, Zap, Grid2X2, Network, CalendarRange, Columns2, Workflow, ListTree, Rows3, Eye, EyeOff, ImageDown, GraduationCap, Code2, FileDown, Presentation, AlignLeft } from 'lucide-react';
 
 import { ThemeSwitcher } from './components/ThemeSwitcher';
 import { TokenUpload } from './components/TokenUpload';
@@ -31,6 +31,7 @@ import { ShapeLibrary, SHAPE_DND_MIME } from './components/ShapeLibrary';
 import { KanbanBoard } from './components/KanbanBoard';
 import { MatrixView } from './components/MatrixView';
 import { TimelineView } from './components/TimelineView';
+import { OutlineView } from './components/OutlineView';
 import { usePersistence } from './utils/persistence';
 import { useAutosave } from './hooks/useAutosave';
 import { exportCanvasPng, exportDomViewPng } from './utils/exportPng';
@@ -87,6 +88,7 @@ const VIEW_BUTTONS: { mode: ViewMode; Icon: typeof Network; active: string }[] =
   { mode: 'matrix', Icon: Grid2X2, active: 'bg-purple-600 text-white' },
   { mode: 'timeline', Icon: CalendarRange, active: 'bg-orange-600 text-white' },
   { mode: 'kanban', Icon: Columns2, active: 'bg-emerald-600 text-white' },
+  { mode: 'outline', Icon: AlignLeft, active: 'bg-slate-600 text-white' },
 ];
 
 function Flow() {
@@ -289,6 +291,7 @@ function Flow() {
       {viewMode === 'kanban' && <KanbanBoard />}
       {viewMode === 'matrix' && <MatrixView />}
       {viewMode === 'timeline' && <TimelineView />}
+      {viewMode === 'outline' && <OutlineView notify={notify} />}
 
       {/* Header — вне ReactFlow, виден во всех режимах (кроме presentation / learn) */}
       {!presentationMode && !learnMode && (

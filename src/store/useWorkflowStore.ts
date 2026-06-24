@@ -16,7 +16,7 @@ import { calculateBudgetRollup, calculateTimelineRollup } from '../utils/pmEngin
 import { getClusteredElements, getTreeLayout, getLaneLayout } from '../utils/layout';
 import { getChildren, getDescendants, getParent, cloneSubtree } from '../utils/tree';
 
-export type ViewMode = 'mindmap' | 'diagram' | 'matrix' | 'timeline' | 'kanban';
+export type ViewMode = 'mindmap' | 'diagram' | 'matrix' | 'timeline' | 'kanban' | 'outline';
 export type DiagramLayout = 'tree' | 'lanes';
 
 interface WorkflowState {
