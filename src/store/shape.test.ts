@@ -40,3 +40,27 @@ describe('setNodeShape', () => {
     expect(n.data.shape).toBe('decision');
   });
 });
+
+describe('addShapeNode', () => {
+  it('appends one standalone shape node at the drop position, selected, with no edge', () => {
+    const before = useWorkflowStore.getState().nodes.length;
+    const id = useWorkflowStore.getState().addShapeNode('server', { x: 321, y: 654 });
+    const s = useWorkflowStore.getState();
+    expect(s.nodes.length).toBe(before + 1);
+    const n = s.nodes.find((x) => x.id === id)!;
+    expect(n.type).toBe('shape');
+    expect(n.data.shape).toBe('server');
+    expect(n.data.label).toBe('Server');         // humanizeShape
+    expect(n.position).toEqual({ x: 321, y: 654 }); // drop position preserved (no auto-layout)
+    expect(s.edges.length).toBe(0);                 // standalone — no parent edge
+    expect(s.selectedNodeId).toBe(id);
+    expect(s.isEditing).toBe(true);                 // entered edit mode (poll frozen)
+  });
+
+  it('is a single undo step that removes the dropped node', () => {
+    const before = useWorkflowStore.getState().nodes.length;
+    useWorkflowStore.getState().addShapeNode('decision', { x: 10, y: 20 });
+    useWorkflowStore.temporal.getState().undo();
+    expect(useWorkflowStore.getState().nodes.length).toBe(before);
+  });
+});

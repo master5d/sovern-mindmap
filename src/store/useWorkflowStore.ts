@@ -11,7 +11,7 @@ import {
   applyNodeChanges,
   applyEdgeChanges,
 } from '@xyflow/react';
-import { SOVERNNodeData, ShapeKind } from '../types';
+import { SOVERNNodeData, ShapeKind, humanizeShape } from '../types';
 import { calculateBudgetRollup, calculateTimelineRollup } from '../utils/pmEngine';
 import { getClusteredElements, getTreeLayout, getLaneLayout } from '../utils/layout';
 import { getChildren, getDescendants, getParent, cloneSubtree } from '../utils/tree';
@@ -37,6 +37,7 @@ interface WorkflowState {
   setSelectedNode: (id: string | null) => void;
   updateNodeData: (id: string, data: Partial<SOVERNNodeData>) => void;
   setNodeShape: (id: string, shape: ShapeKind) => void;
+  addShapeNode: (shape: ShapeKind, position: { x: number; y: number }) => string;
   addChildNode: (parentId: string) => string;
   addSiblingNode: (nodeId: string) => string;
   deleteNodeCascade: (nodeId: string) => void;
@@ -178,6 +179,21 @@ export const useWorkflowStore = create<WorkflowState>()(
     });
     // Re-rollup without a second undo entry — the type+shape flip above is the one step.
     withoutHistory(() => get().recalculate());
+  },
+  addShapeNode: (shape, position) => {
+    get().enterEditMode(); // idempotent: freezes the live poll + resumes undo tracking
+    const id = `n-${crypto.randomUUID()}`;
+    const newNode = {
+      id,
+      type: 'shape' as const,
+      position,
+      data: { label: humanizeShape(shape), layer: 'projects' as const, status: 'pending' as const, shape },
+    };
+    // Standalone node — no parent edge. The append below is the single tracked undo step.
+    set({ nodes: [...get().nodes, newNode as any], selectedNodeId: id });
+    // Recalc rollups WITHOUT auto-layout, so the drop coordinates survive (cf. addImportedGraph).
+    withoutHistory(() => get().recalculate());
+    return id;
   },
   addChildNode: (parentId) => {
     get().enterEditMode();
