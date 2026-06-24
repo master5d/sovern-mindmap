@@ -2,9 +2,8 @@ import { ComponentType, ReactNode } from 'react';
 import {
   User, Cloud, Server, CircuitBoard, Monitor, Laptop, HardDrive,
   Router, Network, ShieldCheck, Wifi, BrainCircuit, Bot, Boxes, Webhook, Container,
-  CloudCog, CloudLightning,
 } from 'lucide-react';
-import { SiGooglecloud } from '@icons-pack/react-simple-icons';
+import { Aws, Azure, Gcp } from './cloudIcons';
 import { SOVERNNodeData } from '../../types';
 
 export type ShapeKind = NonNullable<SOVERNNodeData['shape']>;
@@ -15,7 +14,7 @@ export interface ShapeRender {
   className?: string;
   /** svg mode: silhouette stretched behind the label */
   svg?: (selected: boolean) => ReactNode;
-  /** icon mode: lucide or simple-icons component shown above the label */
+  /** icon mode: lucide or vendored cloud-icon component shown above the label */
   Icon?: ComponentType<{ size?: number | string; className?: string }>;
 }
 
@@ -64,7 +63,7 @@ export const SHAPE_GEOMETRY: Record<ShapeKind, ShapeRender> = {
   'vector-store': { mode: 'icon', Icon: Boxes, className: 'rounded-xl' },
   gateway: { mode: 'icon', Icon: Webhook, className: 'rounded-xl' },
   container: { mode: 'icon', Icon: Container, className: 'rounded-xl' },
-  aws: { mode: 'icon', Icon: CloudCog, className: 'rounded-xl' },
-  azure: { mode: 'icon', Icon: CloudLightning, className: 'rounded-xl' },
-  gcp: { mode: 'icon', Icon: SiGooglecloud, className: 'rounded-xl' },
+  aws: { mode: 'icon', Icon: Aws, className: 'rounded-xl' },
+  azure: { mode: 'icon', Icon: Azure, className: 'rounded-xl' },
+  gcp: { mode: 'icon', Icon: Gcp, className: 'rounded-xl' },
 };
