@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.0.0-alpha.11] - 2026-06-24
+
+### 🚀 Added — Outline / Document view (slice 13)
+- **Outline / Document view (6th view):** renders the graph as a linear, nested **Markdown document** — each top-level root becomes a `# heading`, its subtree renders as depth-indented `- bullets` (hybrid shape: document-like + robust on deep graphs), with **Copy** and **Save .md** buttons. Read-only: the graph is still edited on the canvas. A single **DFS pre-order** traversal (`selectOutlineRows` — the depth-first counterpart to the BFS Learn order; lane-filtered, cycle-safe, total so isolated cycles are never dropped) feeds *both* the on-screen render and `outlineToMarkdown`, so the screen and the exported `.md` can't drift. Supports the writing/LMS workflow and a visual↔linear switch (neurodivergent-friendly). No new dependencies. *First slice of the Ayoa-inspired sovereign-canvas epic.*
+
+### 🧪 Tests
+- Full suite **175** green; verified live (Outline button → document of the live board; Copy yields the exact Markdown; switching back to MindMap leaves the graph intact).
+
 ## [v1.0.0-alpha.10] - 2026-06-24
 
 ### 🚀 Added — Keyboard a11y (slice 12) + cloud-provider pack (slice 11)

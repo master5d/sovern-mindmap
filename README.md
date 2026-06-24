@@ -8,13 +8,14 @@ The **SOVERN MindMap Control Plane** is a high-performance orchestration tool de
 
 ## 🚀 Key Features
 
-### 1. Multimodal Visualization (The 5 Views)
-Switch seamlessly between five analytical dimensions. The MindMap and Diagram are React Flow canvases; Matrix, Timeline and Kanban are dedicated DOM views layered on top:
+### 1. Multimodal Visualization (The 6 Views)
+Switch seamlessly between six analytical dimensions. The MindMap and Diagram are React Flow canvases; Matrix, Timeline, Kanban and Outline are dedicated DOM views layered on top:
 *   **🕸️ MindMap Mode:** Hierarchical canvas. Feedback boards get a **cluster layout** (area columns with card grids); generic graphs fall back to Dagre auto-layout.
 *   **🧭 Diagram Mode:** Strict org-chart tree or dependency swimlanes (one lane per layer), orthogonal edges with arrows, plus a read-only **presentation mode** for demos and exports.
 *   **📊 Priority Matrix (2x2):** Eisenhower quadrants (*Do First / Schedule / Quick Wins / Backlog*) with tinted backgrounds. Tickets render as compact chips positioned by **Impact × Urgency** (1-10); same-cell tickets stack with a "+N" expander.
 *   **📅 Timeline:** Area lanes over a real time axis (ticket `created` date), day gridlines, greedy stacking on overlap.
 *   **📋 Kanban Board:** *Triage / Pending / Active / Done / Blocked* columns with counts, search, area filters and **drag-and-drop** — dropping a card persists the status change back to `feedback.jsonl` via the dev-server API (`POST /api/feedback/status` → `fb.mjs`).
+*   **≡ Outline / Document:** the graph as a linear, nested **Markdown document** (each root a `# heading`, descendants depth-indented bullets, DFS pre-order) with **Copy** + **Save .md**. A visual↔linear switch for writing/reading and the LMS workflow — read-only (the graph is edited on the canvas).
 
 ### 2. Deterministic AI-First PM Engine
 *   **⚡ Token Budgeting:** Replaced traditional currency with **AI Tokens**. Costs roll up automatically from subtasks to parent projects.
