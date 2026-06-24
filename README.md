@@ -33,16 +33,17 @@ The app boots as a **viewer** of the live board; the first hand-edit enters **Ed
 *   **⌨️ Keyboard authoring:** `Tab` = child, `Enter` = sibling, `F2` / double-click = rename, `Delete` = cascade-delete, `Esc` = clear.
 *   **↩️ Undo / Redo:** `Ctrl+Z` / `Ctrl+Y` (zundo) — one step per structural edit; React-Flow churn never pollutes history.
 *   **✏️ Inline editing** on the node itself, **fold/collapse** subtrees (+N badge), and **copy/paste** subtree (`Ctrl+C` / `Ctrl+V`, fresh ids).
-*   **🔷 Shape picker:** select a node → pick from the 26-shape palette in the sidebar (Basic / Home AI-lab groups); the node converts to that diagram shape in **one undo step** (works on any node, including hand-authored ones).
-*   **🧰 Drag-from-library:** a persistent shape rail on the left edge of the MindMap canvas — **drag a swatch onto the canvas** to create a brand-new standalone shape node at the drop point (labelled with the shape kind, selected, one undo step; drop position preserved). MindMap-only; foreign drags ignored.
+*   **🔷 Shape picker:** select a node → pick from the 29-shape palette in the sidebar (Basic / Home AI-lab / Cloud groups); the node converts to that diagram shape in **one undo step** (works on any node, including hand-authored ones).
+*   **🧰 Drag-from-library:** a persistent shape rail on the left edge of the MindMap canvas — **drag a swatch onto the canvas** to create a brand-new standalone shape node at the drop point (labelled with the shape kind, selected, one undo step; drop position preserved). Each swatch is a **keyboard-accessible button** — `Tab` to focus, `Enter`/`Space` (or click) adds the shape at the canvas center. MindMap-only; foreign drags ignored.
 *   **💾 Autosave** to a *separate workspace file* (Tauri app-data / browser `localStorage`) — **never** writes `board.canvas`.
 
 ### 5. AI Canvas (prompt → diagram)
 Describe a diagram in the prompt bar and an **editable** one appears on the same canvas — no separate tool windows. *Tools are invisible backends; the canvas is the single surface.*
 *   **🪄 Generation:** prompt → LiteLLM gateway (dev-proxied at `/llm`; the key is injected **server-side** and never reaches the client bundle) → output normalized/repaired by `extractCanvas` → native **JSON Canvas** interchange (not Mermaid) → appended as **one undoable** Edit-Mode edit with dagre layout.
-*   **🔷 26 shapes** (one `SHAPE_KINDS` source of truth, rendered via the `shapeGeometry` registry):
+*   **🔷 29 shapes** (one `SHAPE_KINDS` source of truth, rendered via the `shapeGeometry` registry):
     *   **Basic (12):** rectangle · rounded · decision · terminal · note · cylinder (datastore) · ellipse · parallelogram (I/O) · hexagon · cloud (service) · actor (user) · document.
     *   **Home AI-lab pack (14):** server · gpu · workstation · laptop · storage · router · switch · firewall · wifi · model · agent · vector-store · gateway · container — lucide-icon shapes for diagramming a home AI lab (compute / networking / ML stack). The generation prompt has a scope-guard so they don't leak into ordinary flowcharts.
+    *   **Cloud pack (3):** aws · azure · gcp — vendored official monochrome brand marks (no runtime dep) for public-cloud architecture diagrams; the prompt scope-guards them like the home-lab pack.
 *   Needs the LiteLLM gateway running (canonical port in `NAUTILUS/config/services.json`; the proxy defaults to `:4001`, override with `SOVERN_LLM_GATEWAY`).
 
 ### 6. Learn Mode (step-through walkthroughs)

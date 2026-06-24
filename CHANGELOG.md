@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.0.0-alpha.10] - 2026-06-24
+
+### 🚀 Added — Keyboard a11y (slice 12) + cloud-provider pack (slice 11)
+- **Keyboard-accessible shape library (slice 12):** each drag-from-library swatch is now a real `<button>` — `Tab` to focus, `Enter`/`Space` (or a plain click) adds the shape at the **viewport center** (via the slice-10 `addShapeNode`, one undo step). Dragging still places precisely at the drop point. Closes the pointer-only gap and gives mouse users a click-to-add affordance for free.
+- **Cloud-provider shape pack (slice 11):** +3 public-cloud provider marks — `aws` · `azure` · `gcp` (vocabulary now **29**), rendered with **vendored official monochrome brand SVGs** (`currentColor`, no runtime dependency). The shape library + sidebar picker gain a third **Cloud** group; the AI prompt has a scope-guarded "Cloud providers" section + a multi-cloud few-shot so the marks stay out of ordinary/home-lab diagrams; `.drawio` round-trips via the `mmShape=` marker; dropped/added cloud nodes get brand-correct labels (AWS/GCP via a `humanizeShape` acronym set — which also fixes GPU). *Note:* simple-icons no longer ships the AWS/Azure marks (trademark removal), so the brand SVGs are **vendored** rather than pulled from a package — keeping the dependency count at zero-new.
+
+### 🧪 Tests
+- Full suite **164** green. Verified live: slice 12 — `Tab`→`Enter` adds a node at the canvas center, drag unchanged, single-undo revert; slice 11 — the **Cloud** group renders the 3 real brand marks, and dragging `aws` creates an **"AWS"**-labelled node.
+
 ## [v1.0.0-alpha.9] - 2026-06-24
 
 ### 🚀 Added — Drag-from-library (slice 10)
