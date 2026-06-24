@@ -16,16 +16,27 @@ function mount(ui: ReactElement) {
 }
 
 describe('ShapeLibrary', () => {
-  it('renders 26 draggable swatches, one per shape kind', () => {
-    const { container, cleanup } = mount(<ShapeLibrary />);
-    expect(container.querySelectorAll('[draggable="true"]').length).toBe(26);
-    SHAPE_KINDS.forEach((k) => expect(container.querySelector(`[aria-label="${k}"]`)).toBeTruthy());
+  it('renders one focusable <button> swatch per shape kind', () => {
+    const { container, cleanup } = mount(<ShapeLibrary onPick={() => {}} />);
+    const swatches = [...container.querySelectorAll('[draggable="true"]')];
+    expect(swatches.length).toBe(SHAPE_KINDS.length);
+    swatches.forEach((el) => expect(el.tagName).toBe('BUTTON'));
+    SHAPE_KINDS.forEach((k) => expect(container.querySelector(`button[aria-label="${k}"]`)).toBeTruthy());
     cleanup();
   });
 
-  it('onDragStart writes the shape kind under the private MIME', () => {
-    const { container, cleanup } = mount(<ShapeLibrary />);
-    const el = container.querySelector('[aria-label="server"]') as HTMLElement;
+  it('clicking a swatch calls onPick with that kind', () => {
+    const onPick = vi.fn();
+    const { container, cleanup } = mount(<ShapeLibrary onPick={onPick} />);
+    const btn = container.querySelector('button[aria-label="server"]') as HTMLButtonElement;
+    act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(onPick).toHaveBeenCalledWith('server');
+    cleanup();
+  });
+
+  it('onDragStart still writes the shape kind under the private MIME', () => {
+    const { container, cleanup } = mount(<ShapeLibrary onPick={() => {}} />);
+    const el = container.querySelector('button[aria-label="server"]') as HTMLElement;
     const setData = vi.fn();
     const evt = new Event('dragstart', { bubbles: true }) as any;
     evt.dataTransfer = { setData, effectAllowed: '' };
@@ -35,7 +46,7 @@ describe('ShapeLibrary', () => {
   });
 
   it('collapse toggle hides the swatches', () => {
-    const { container, cleanup } = mount(<ShapeLibrary />);
+    const { container, cleanup } = mount(<ShapeLibrary onPick={() => {}} />);
     const toggle = container.querySelector('button[aria-label="Collapse shape library"]') as HTMLButtonElement;
     act(() => { toggle.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
     expect(container.querySelectorAll('[draggable="true"]').length).toBe(0);

@@ -256,6 +256,12 @@ function Flow() {
     addShapeNode(kind as ShapeKind, position);
   };
 
+  // Keyboard/click add (slice 12): no cursor position → place at the viewport center.
+  const addShapeAtCenter = (kind: ShapeKind) => {
+    const center = screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+    addShapeNode(kind, center);
+  };
+
   return (
     <div style={{ width: '100vw', height: '100vh', backgroundColor: 'var(--bg-canvas)', position: 'relative' }}>
       <EditModeBanner saveState={saveState} />
@@ -386,7 +392,7 @@ function Flow() {
         </button>
       )}
 
-      {viewMode === 'mindmap' && !presentationMode && !learnMode && <ShapeLibrary />}
+      {viewMode === 'mindmap' && !presentationMode && !learnMode && <ShapeLibrary onPick={addShapeAtCenter} />}
       {selectedNodeId && !learnMode && <NodeSidebar />}
       {learnMode && <LearnControls />}
       {notice && (

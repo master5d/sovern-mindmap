@@ -13,7 +13,7 @@ export const SHAPE_DND_MIME = 'application/sovern-shape';
  * Pure drag source — writes the shape kind to dataTransfer on drag start; never
  * touches the store. Reuses SHAPE_GROUPS + ShapeSwatch so it can't drift from SHAPE_KINDS.
  */
-export function ShapeLibrary() {
+export function ShapeLibrary({ onPick }: { onPick: (kind: ShapeKind) => void }) {
   const [collapsed, setCollapsed] = useState(false);
 
   const onDragStart = (e: React.DragEvent, kind: ShapeKind) => {
@@ -43,16 +43,18 @@ export function ShapeLibrary() {
               <div className="text-[9px] font-bold uppercase tracking-widest text-muted">{group.label}</div>
               <div className="grid grid-cols-3 gap-1.5">
                 {group.kinds.map((kind) => (
-                  <div
+                  <button
                     key={kind}
+                    type="button"
                     draggable
                     onDragStart={(e) => onDragStart(e, kind)}
+                    onClick={() => onPick(kind)}
                     title={kind}
                     aria-label={kind}
                     className="flex cursor-grab items-center justify-center rounded-lg p-1 transition-colors hover:bg-hover active:cursor-grabbing"
                   >
                     <ShapeSwatch kind={kind} />
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
