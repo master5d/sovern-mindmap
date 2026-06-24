@@ -9,9 +9,10 @@ import type { ShapeKind } from '../types';
 export const SHAPE_DND_MIME = 'application/sovern-shape';
 
 /**
- * Persistent draggable shape palette pinned to the left edge (MindMap only).
- * Pure drag source — writes the shape kind to dataTransfer on drag start; never
- * touches the store. Reuses SHAPE_GROUPS + ShapeSwatch so it can't drift from SHAPE_KINDS.
+ * Persistent shape palette pinned to the left edge (MindMap only). Reports an
+ * add-intent — a drag payload (dataTransfer) for precise placement, or the onPick
+ * callback (click/keyboard) for center placement; never touches the store itself —
+ * the parent decides where. Reuses SHAPE_GROUPS + ShapeSwatch so it can't drift from SHAPE_KINDS.
  */
 export function ShapeLibrary({ onPick }: { onPick: (kind: ShapeKind) => void }) {
   const [collapsed, setCollapsed] = useState(false);
