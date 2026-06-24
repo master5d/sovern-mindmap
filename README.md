@@ -34,6 +34,7 @@ The app boots as a **viewer** of the live board; the first hand-edit enters **Ed
 *   **↩️ Undo / Redo:** `Ctrl+Z` / `Ctrl+Y` (zundo) — one step per structural edit; React-Flow churn never pollutes history.
 *   **✏️ Inline editing** on the node itself, **fold/collapse** subtrees (+N badge), and **copy/paste** subtree (`Ctrl+C` / `Ctrl+V`, fresh ids).
 *   **🔷 Shape picker:** select a node → pick from the 26-shape palette in the sidebar (Basic / Home AI-lab groups); the node converts to that diagram shape in **one undo step** (works on any node, including hand-authored ones).
+*   **🧰 Drag-from-library:** a persistent shape rail on the left edge of the MindMap canvas — **drag a swatch onto the canvas** to create a brand-new standalone shape node at the drop point (labelled with the shape kind, selected, one undo step; drop position preserved). MindMap-only; foreign drags ignored.
 *   **💾 Autosave** to a *separate workspace file* (Tauri app-data / browser `localStorage`) — **never** writes `board.canvas`.
 
 ### 5. AI Canvas (prompt → diagram)

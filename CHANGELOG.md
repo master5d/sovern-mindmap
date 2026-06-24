@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.0.0-alpha.9] - 2026-06-24
+
+### 🚀 Added — Drag-from-library (slice 10)
+- **Drag-from-library:** a persistent, collapsible **shape library** rail is pinned to the left edge of the MindMap canvas (the 26 swatches in *Basic* / *Home AI-lab* groups, driven by the same `SHAPE_GROUPS` registry as the sidebar picker). **Drag a swatch onto the canvas** to create a brand-new standalone shape node at the drop point — the canonical React Flow HTML5 drag-and-drop (`dataTransfer` under a private `application/sovern-shape` MIME → canvas `onDrop` → `screenToFlowPosition` → a new `addShapeNode` store action). The node is labelled with the humanized shape kind (`server` → "Server"), selected, and added in **one undo step**; its drop coordinates are preserved (rollup recalc runs under `withoutHistory`, no auto-layout stomp). This closes the last authoring gap from slice 9 (which could only *retype* an existing node) — you can now author a node from nothing, completing the Lucidchart/draw.io "drag a shape from the left panel" paradigm. Drag-create is **MindMap-only** (Diagram force-re-layouts and disables node dragging; Learn/Presentation are read-only); foreign drags (files, text) are ignored via a `SHAPE_KINDS` membership guard.
+
+### 🧪 Tests
+- 9 new tests (`humanizeShape` unit, `addShapeNode` store, `ShapeLibrary` component on the React-19 `act` harness). Full suite **161** green; verified live (Playwright synthetic HTML5 DnD: drag → standalone node at drop spot → single-undo revert → library hidden in Diagram view).
+
 ## [v1.0.0-alpha.8] - 2026-06-23
 
 ### 🚀 Added — Home AI-lab shape pack (slice 8) + manual shape picker (slice 9)
