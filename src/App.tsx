@@ -23,6 +23,7 @@ import { selectVisibleNodes, selectVisibleEdges, selectLearnOrder, selectVisible
 import { SOVERNNode } from './components/nodes/SOVERNNode';
 import { LaneNode } from './components/nodes/LaneNode';
 import { ShapeNode } from './components/nodes/ShapeNode';
+import { ArtifactNode } from './components/nodes/ArtifactNode';
 import { NodeSidebar } from './components/NodeSidebar';
 import { EditModeBanner } from './components/EditModeBanner';
 import { AiPromptBar } from './components/AiPromptBar';
@@ -46,6 +47,7 @@ const nodeTypes = {
   sovern: SOVERNNode,
   lane: LaneNode,
   shape: ShapeNode,
+  artifact: ArtifactNode,
 };
 
 // Stable no-op so learn mode (read-only) can detach React Flow's change handlers
