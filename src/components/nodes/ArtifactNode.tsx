@@ -21,7 +21,7 @@ export function ArtifactNode({ data }: NodeProps<ArtifactNodeData>) {
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script type="text/babel" data-type="module">
-    ${data.code || 'const App = () => <div>No code provided</div>;'}
+    ${(data.code || 'const App = () => <div>No code provided</div>;').replace(/<\/script>/gi, '<\\/script>')}
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(React.createElement(App));
   </script>
@@ -38,7 +38,7 @@ export function ArtifactNode({ data }: NodeProps<ArtifactNodeData>) {
       <iframe 
         srcDoc={srcDoc} 
         className="flex-1 w-full h-full bg-white"
-        sandbox="allow-scripts allow-same-origin"
+        sandbox="allow-scripts"
       />
     </div>
   );

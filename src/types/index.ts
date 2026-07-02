@@ -75,7 +75,9 @@ export interface SOVERNNodeData {
 }
 
 // Correctly extend React Flow Node type
-export type SOVERNNode = RFNode<SOVERNNodeData>;
+export type SOVERNNode = RFNode<SOVERNNodeData, 'sovern'>;
+export type ArtifactNode = RFNode<import('../components/nodes/ArtifactNode').ArtifactNodeData, 'artifact'>;
+export type AppNode = SOVERNNode | ArtifactNode;
 export type SOVERNEdge = RFEdge;
 
 export interface JSONCanvasNode {

@@ -5,7 +5,8 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { GraphManager } from "../utils/graphManager.js";
-import { SOVERNLayer, NodeStatus } from "../types/index.js";
+import { AppNode, SOVERNLayer, NodeStatus } from "../types/index.js";
+import { randomUUID } from 'crypto';
 
 // In a real Phase 3, this would connect to the Tauri state via IPC or a Shared File
 // For now, we initialize an internal GraphManager instance to demonstrate the logic.
@@ -114,10 +115,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
 
       case "create_node": {
-        const id = crypto.randomUUID();
-        const newNode = {
+        const id = randomUUID();
+        const newNode: AppNode = {
           id,
-          type: 'sovern' as const,
+          type: 'sovern',
           position: { x: Math.random() * 500, y: Math.random() * 500 },
           data: {
             label: args?.label as string,
@@ -143,23 +144,23 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         graphManager.recalculate();
         const nodes = graphManager.getNodes();
         const node = nodes.find(n => n.id === args?.node_id);
-        const total = node?.data.rollupBudget || node?.data.budget || 0;
+        const total = (node?.type === 'sovern' ? (node.data.rollupBudget || node.data.budget) : 0) || 0;
         return {
           content: [{ type: "text", text: `Total rollup budget for ${args?.node_id}: $${total}` }],
         };
       }
 
       case "create_artifact_node": {
-        const id = crypto.randomUUID();
-        const newNode = {
+        const id = randomUUID();
+        const newNode: AppNode = {
           id,
-          type: 'artifact' as any, // Cast to any to bypass strict union check for now
+          type: 'artifact',
           position: { x: Math.random() * 800, y: Math.random() * 600 },
           data: {
             code: args?.code as string,
           },
         };
-        graphManager.addNode(newNode as any);
+        graphManager.addNode(newNode);
         return {
           content: [{ type: "text", text: `Artifact Node created successfully with ID: ${id}. The React component is now live on the canvas.` }],
         };
