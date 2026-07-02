@@ -87,6 +87,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           },
           required: ["node_id"],
         },
+      },
+      {
+        name: "create_artifact_node",
+        description: "Creates an interactive UI Artifact node containing React code",
+        inputSchema: {
+          type: "object",
+          properties: {
+            code: { type: "string", description: "Raw React component code (must define an 'App' component)" },
+          },
+          required: ["code"],
+        },
       }
     ],
   };
@@ -135,6 +146,22 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const total = node?.data.rollupBudget || node?.data.budget || 0;
         return {
           content: [{ type: "text", text: `Total rollup budget for ${args?.node_id}: $${total}` }],
+        };
+      }
+
+      case "create_artifact_node": {
+        const id = crypto.randomUUID();
+        const newNode = {
+          id,
+          type: 'artifact' as any, // Cast to any to bypass strict union check for now
+          position: { x: Math.random() * 800, y: Math.random() * 600 },
+          data: {
+            code: args?.code as string,
+          },
+        };
+        graphManager.addNode(newNode as any);
+        return {
+          content: [{ type: "text", text: `Artifact Node created successfully with ID: ${id}. The React component is now live on the canvas.` }],
         };
       }
 
