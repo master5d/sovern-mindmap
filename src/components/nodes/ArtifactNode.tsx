@@ -1,11 +1,8 @@
 import React, { useMemo } from 'react';
-import { NodeProps } from 'reactflow';
+import { NodeProps } from '@xyflow/react';
+import type { ArtifactNode as ArtifactNodeType } from '../../types';
 
-export interface ArtifactNodeData {
-  code: string;
-}
-
-export function ArtifactNode({ data }: NodeProps<ArtifactNodeData>) {
+export function ArtifactNode({ data }: NodeProps<ArtifactNodeType>) {
   const srcDoc = useMemo(() => {
     return `
 <!DOCTYPE html>

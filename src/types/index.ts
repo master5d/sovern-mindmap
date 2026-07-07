@@ -74,9 +74,19 @@ export interface SOVERNNodeData {
   [key: string]: any; // sovern:* metadata
 }
 
+export interface ArtifactNodeData {
+  artifactId: string;          // = inbox id
+  code: string;
+  name?: string;
+  variantGroup?: string;
+  status?: 'pending' | 'approved' | 'rejected';
+  projectDir?: string;         // абсолютный путь проекта для экспорта
+  [key: string]: unknown;      // требование Node<T> в @xyflow/react 12
+}
+
 // Correctly extend React Flow Node type
 export type SOVERNNode = RFNode<SOVERNNodeData, 'sovern'>;
-export type ArtifactNode = RFNode<import('../components/nodes/ArtifactNode').ArtifactNodeData, 'artifact'>;
+export type ArtifactNode = RFNode<ArtifactNodeData, 'artifact'>;
 export type AppNode = SOVERNNode | ArtifactNode;
 export type SOVERNEdge = RFEdge;
 

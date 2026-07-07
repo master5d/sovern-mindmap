@@ -157,6 +157,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           type: 'artifact',
           position: { x: Math.random() * 800, y: Math.random() * 600 },
           data: {
+            artifactId: id,
             code: args?.code as string,
           },
         };
