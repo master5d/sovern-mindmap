@@ -7,6 +7,7 @@ import {
 import { GraphManager } from "../utils/graphManager.js";
 import { AppNode, SOVERNLayer, NodeStatus } from "../types/index.js";
 import { randomUUID } from 'crypto';
+import { appendArtifact, readDecisions } from "./artifactInbox.js";
 
 // In a real Phase 3, this would connect to the Tauri state via IPC or a Shared File
 // For now, we initialize an internal GraphManager instance to demonstrate the logic.
@@ -96,8 +97,21 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           type: "object",
           properties: {
             code: { type: "string", description: "Raw React component code (must define an 'App' component)" },
+            name: { type: "string", description: "Optional human-readable name for the artifact" },
+            variant_group: { type: "string", description: "Optional group id to cluster A/B variants" },
+            project_dir: { type: "string", description: "Optional target project directory for export" },
           },
           required: ["code"],
+        },
+      },
+      {
+        name: "read_artifact_decisions",
+        description: "Read human approve/reject decisions recorded for canvas artifacts",
+        inputSchema: {
+          type: "object",
+          properties: {
+            variant_group: { type: "string", description: "Optional filter to a specific variant group" },
+          },
         },
       }
     ],
@@ -151,19 +165,22 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "create_artifact_node": {
-        const id = randomUUID();
-        const newNode: AppNode = {
-          id,
-          type: 'artifact',
-          position: { x: Math.random() * 800, y: Math.random() * 600 },
-          data: {
-            artifactId: id,
-            code: args?.code as string,
-          },
-        };
-        graphManager.addNode(newNode);
+        const e = appendArtifact({
+          code: args?.code as string,
+          name: args?.name as string | undefined,
+          variant_group: args?.variant_group as string | undefined,
+          project_dir: args?.project_dir as string | undefined,
+        });
         return {
-          content: [{ type: "text", text: `Artifact Node created successfully with ID: ${id}. The React component is now live on the canvas.` }],
+          content: [{ type: "text", text: `Artifact ${e.id} queued to canvas inbox` + (e.variant_group ? ` (group ${e.variant_group})` : '') }],
+        };
+      }
+
+      case "read_artifact_decisions": {
+        const variantGroup = args?.variant_group as string | undefined;
+        const decisions = readDecisions().filter(d => !variantGroup || d.variant_group === variantGroup);
+        return {
+          content: [{ type: "text", text: JSON.stringify(decisions) }],
         };
       }
 
