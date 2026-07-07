@@ -68,6 +68,7 @@ const prdNodes: Node<SOVERNNodeData>[] = [
   { id: 'mcp-server', type: 'sovern', position: { x: 400, y: 450 }, data: { label: 'MCP API', layer: 'tools', status: 'done', agent: 'Hermes', budget: 100000, urgency: 9, impact: 10, dates: { start: '2026-05-06', end: '2026-05-07' } } },
   { id: 'n8n-infra', type: 'sovern', position: { x: 200, y: 450 }, data: { label: 'n8n Infra', layer: 'tools', status: 'active', budget: 45000, urgency: 5, impact: 7, dates: { start: '2026-05-07', end: '2026-05-10' } } },
   { id: 'heuristic-checks', type: 'sovern', position: { x: 300, y: 600 }, data: { label: 'Heuristic Checks', layer: 'boss', status: 'pending', budget: 150000, urgency: 4, impact: 6, dates: { start: '2026-05-20', end: '2026-06-15' } } },
+  { id: 'smoke-test-artifact', type: 'artifact' as any, position: { x: 500, y: 700 }, data: { code: 'const App = () => (<div className="p-8 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-3xl shadow-2xl text-white font-sans"><h1 className="text-4xl font-bold mb-4">DesOps Orchestrator Live!</h1><p className="text-lg opacity-90">This React code was rendered dynamically inside the sandboxed iframe via Babel.</p><button className="mt-6 px-6 py-2 bg-white text-blue-600 rounded-full font-semibold hover:bg-opacity-90 transition-all">Click me</button></div>);' } },
 ];
 
 const prdEdges: Edge[] = [
