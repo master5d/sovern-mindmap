@@ -24,6 +24,7 @@ export function ArtifactNode({ id, data }: NodeProps<ArtifactNodeType>) {
   const resolved = useThemeStore((s) => s.resolved);
   const [exportedTo, setExportedTo] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const status = data.status ?? 'pending';
 
   const srcDoc = useMemo(() => {
@@ -68,64 +69,61 @@ export function ArtifactNode({ id, data }: NodeProps<ArtifactNodeType>) {
     `;
   }, [data.code, resolved]);
 
-  async function handleApprove(e: React.MouseEvent) {
+  /** POST the review decision; only patch node status after a confirmed ok response. */
+  async function decide(e: React.MouseEvent, decision: 'approved' | 'rejected') {
     e.stopPropagation();
     if (busy) return;
     setBusy(true);
+    setError(null);
     try {
-      await fetch('/api/artifacts/decision', {
+      const res = await fetch('/api/artifacts/decision', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           artifactId: data.artifactId,
-          decision: 'approved',
+          decision,
           name: data.name,
           variant_group: data.variantGroup,
         }),
       });
+      if (!res.ok) {
+        // server recorded nothing — keep status pending, keep buttons visible
+        console.warn(`artifact decision failed: HTTP ${res.status}`);
+        setError(`Decision failed (HTTP ${res.status}) — retry`);
+        return;
+      }
 
       let newExportedTo: string | undefined;
-      if (data.projectDir) {
-        const res = await fetch('/api/artifacts/export', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            artifactId: data.artifactId,
-            projectDir: data.projectDir,
-            name: data.name ?? data.artifactId,
-          }),
-        });
+      if (decision === 'approved' && data.projectDir) {
         try {
-          const json = await res.json();
-          newExportedTo = json?.path;
-        } catch {
-          // export failed to return usable JSON — status still updates below
+          const exportRes = await fetch('/api/artifacts/export', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              artifactId: data.artifactId,
+              projectDir: data.projectDir,
+              name: data.name ?? data.artifactId,
+            }),
+          });
+          if (exportRes.ok) {
+            newExportedTo = (await exportRes.json())?.path;
+          } else {
+            // decision is already recorded — approve stands, but surface the export failure
+            console.warn(`artifact export failed: HTTP ${exportRes.status}`);
+            setError('Export failed — approved, not exported');
+          }
+        } catch (err) {
+          console.warn('artifact export failed:', err);
+          setError('Export failed — approved, not exported');
         }
       }
 
       setExportedTo(newExportedTo);
-      patchNodeStatus(id, { status: 'approved', ...(newExportedTo ? { exportedTo: newExportedTo } : {}) });
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleReject(e: React.MouseEvent) {
-    e.stopPropagation();
-    if (busy) return;
-    setBusy(true);
-    try {
-      await fetch('/api/artifacts/decision', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          artifactId: data.artifactId,
-          decision: 'rejected',
-          name: data.name,
-          variant_group: data.variantGroup,
-        }),
-      });
-      patchNodeStatus(id, { status: 'rejected' });
+      patchNodeStatus(id, { status: decision, ...(newExportedTo ? { exportedTo: newExportedTo } : {}) });
+    } catch (err) {
+      // network failure — nothing recorded, keep pending and allow retry
+      console.warn('artifact decision failed:', err);
+      setError('Decision failed (network) — retry');
     } finally {
       setBusy(false);
     }
@@ -146,26 +144,33 @@ export function ArtifactNode({ id, data }: NodeProps<ArtifactNodeType>) {
             </span>
           )}
         </div>
-        {status === 'pending' && (
-          <div className="flex items-center gap-1 shrink-0">
-            <button
-              type="button"
-              onClick={handleApprove}
-              disabled={busy}
-              className="px-2 py-0.5 rounded bg-green-600/20 text-green-500 hover:bg-green-600/30 disabled:opacity-50"
-            >
-              ✓ Approve
-            </button>
-            <button
-              type="button"
-              onClick={handleReject}
-              disabled={busy}
-              className="px-2 py-0.5 rounded bg-red-600/20 text-red-500 hover:bg-red-600/30 disabled:opacity-50"
-            >
-              ✗ Reject
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-1 shrink-0">
+          {error && (
+            <span className="text-red-500 text-[10px] truncate max-w-48" title={error}>
+              {error}
+            </span>
+          )}
+          {status === 'pending' && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => decide(e, 'approved')}
+                disabled={busy}
+                className="nodrag nopan px-2 py-0.5 rounded bg-green-600/20 text-green-500 hover:bg-green-600/30 disabled:opacity-50"
+              >
+                ✓ Approve
+              </button>
+              <button
+                type="button"
+                onClick={(e) => decide(e, 'rejected')}
+                disabled={busy}
+                className="nodrag nopan px-2 py-0.5 rounded bg-red-600/20 text-red-500 hover:bg-red-600/30 disabled:opacity-50"
+              >
+                ✗ Reject
+              </button>
+            </>
+          )}
+        </div>
       </div>
       <iframe
         srcDoc={srcDoc}

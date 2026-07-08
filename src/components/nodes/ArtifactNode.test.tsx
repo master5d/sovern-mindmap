@@ -6,6 +6,7 @@ import type { NodeProps } from '@xyflow/react';
 import { ArtifactNode } from './ArtifactNode';
 import type { ArtifactNode as ArtifactNodeType } from '../../types';
 import { useThemeStore } from '../../store/useThemeStore';
+import { useWorkflowStore } from '../../store/useWorkflowStore';
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -38,9 +39,34 @@ function makeProps(data: Partial<ArtifactNodeType['data']>): NodeProps<ArtifactN
   } as unknown as NodeProps<ArtifactNodeType>;
 }
 
+/** Seed the workflow store with the node under test so patchNodeStatus has a target. */
+function seedStore(status: 'pending' | 'approved' | 'rejected' = 'pending') {
+  useWorkflowStore.setState({
+    nodes: [
+      {
+        id: 'artifact-1',
+        type: 'artifact',
+        position: { x: 0, y: 0 },
+        data: { artifactId: 'a1', code: '', status },
+      },
+    ] as any,
+  });
+}
+
+function storeStatus(): string | undefined {
+  return (useWorkflowStore.getState().nodes[0]?.data as any)?.status;
+}
+
+function findButton(container: HTMLElement, re: RegExp): HTMLButtonElement {
+  return Array.from(container.querySelectorAll('button')).find((b) =>
+    re.test(b.textContent ?? ''),
+  ) as HTMLButtonElement;
+}
+
 describe('ArtifactNode', () => {
   beforeEach(() => {
     useThemeStore.setState({ mode: 'dark', resolved: 'dark' });
+    seedStore('pending');
   });
 
   afterEach(() => {
@@ -94,7 +120,67 @@ describe('ArtifactNode', () => {
     const [, options] = fetchMock.mock.calls[0];
     const body = JSON.parse((options as RequestInit).body as string);
     expect(body).toMatchObject({ artifactId: 'a1', decision: 'approved', name: 'Hero Card', variant_group: 'hero-variants' });
+    expect(storeStatus()).toBe('approved');
 
+    cleanup();
+  });
+
+  it('review buttons carry nodrag nopan so React Flow does not arm a drag', () => {
+    const { container, cleanup } = mount(<ArtifactNode {...makeProps({ status: 'pending' })} />);
+    const approveButton = findButton(container, /approve/i);
+    const rejectButton = findButton(container, /reject/i);
+    expect(approveButton.className).toContain('nodrag');
+    expect(approveButton.className).toContain('nopan');
+    expect(rejectButton.className).toContain('nodrag');
+    expect(rejectButton.className).toContain('nopan');
+    cleanup();
+  });
+
+  it('keeps status pending and buttons usable when the decision endpoint returns an error', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 500, json: async () => ({ ok: false }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { container, cleanup } = mount(<ArtifactNode {...makeProps({ status: 'pending' })} />);
+    const approveButton = findButton(container, /approve/i);
+
+    await act(async () => {
+      approveButton.click();
+      await Promise.resolve();
+    });
+
+    // server recorded nothing → node must NOT be marked approved
+    expect(storeStatus()).toBe('pending');
+    // buttons still present and re-enabled for retry
+    const retryButton = findButton(container, /approve/i);
+    expect(retryButton).toBeTruthy();
+    expect(retryButton.disabled).toBe(false);
+    // error state surfaced in the header
+    expect(container.textContent?.toLowerCase()).toContain('failed');
+
+    cleanup();
+  });
+
+  it('handles a network rejection without marking the node and without unhandled rejection', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError('network down'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { container, cleanup } = mount(<ArtifactNode {...makeProps({ status: 'pending' })} />);
+    const rejectButton = findButton(container, /reject/i);
+
+    await act(async () => {
+      rejectButton.click();
+      await Promise.resolve();
+    });
+
+    expect(storeStatus()).toBe('pending');
+    const retryButton = findButton(container, /reject/i);
+    expect(retryButton).toBeTruthy();
+    expect(retryButton.disabled).toBe(false);
+    expect(container.textContent?.toLowerCase()).toContain('failed');
+    expect(warnSpy).toHaveBeenCalled();
+
+    warnSpy.mockRestore();
     cleanup();
   });
 });
