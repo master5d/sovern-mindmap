@@ -15,9 +15,24 @@ import { SOVERNNodeData, ShapeKind, humanizeShape } from '../types';
 import { calculateBudgetRollup, calculateTimelineRollup } from '../utils/pmEngine';
 import { getClusteredElements, getTreeLayout, getLaneLayout } from '../utils/layout';
 import { getChildren, getDescendants, getParent, cloneSubtree } from '../utils/tree';
+import {
+  saveBoardContent,
+  loadBoardContent,
+  deleteBoardContent,
+  saveBoardsRegistry,
+} from '../utils/persistence';
 
 export type ViewMode = 'mindmap' | 'diagram' | 'matrix' | 'timeline' | 'kanban' | 'outline';
 export type DiagramLayout = 'tree' | 'lanes';
+
+/** One canvas tab. `review` = the service «Design Review» board (artifact inbox). */
+export interface BoardMeta {
+  id: string;
+  name: string;
+  kind: 'user' | 'review';
+}
+
+export const REVIEW_BOARD_NAME = 'Design Review';
 
 interface WorkflowState {
   nodes: Node<SOVERNNodeData>[];
@@ -68,6 +83,15 @@ interface WorkflowState {
   pasteSubtree: (targetParentId?: string) => void;
   addGeneratedGraph: (newNodes: Node<SOVERNNodeData>[], newEdges: Edge[]) => void;
   addImportedGraph: (newNodes: Node<SOVERNNodeData>[], newEdges: Edge[]) => void;
+  // ── Canvas Project Tabs (multi-board) — non-temporal fields ──
+  boards: BoardMeta[];
+  activeBoardId: string;
+  initBoards: (reg: { boards: BoardMeta[]; activeBoardId: string }) => void;
+  switchBoard: (id: string) => Promise<void>;
+  createBoard: (name?: string) => Promise<string>;
+  renameBoard: (id: string, name: string) => void;
+  deleteBoard: (id: string) => Promise<void>;
+  ensureReviewBoard: () => string;
 }
 
 /**
@@ -321,6 +345,78 @@ export const useWorkflowStore = create<WorkflowState>()(
     set({ nodes: [...get().nodes, ...newNodes], edges: [...get().edges, ...newEdges] });
     // Imported diagrams carry real coordinates — recalc rollups but DON'T re-layout.
     withoutHistory(() => get().recalculate());
+  },
+  // ── Canvas Project Tabs (multi-board). All board fields stay outside zundo
+  //    tracking (temporal partialize = nodes/edges only). ──
+  boards: [],
+  activeBoardId: '',
+  initBoards: (reg) => set({ boards: reg.boards, activeBoardId: reg.activeBoardId }),
+  switchBoard: async (id) => {
+    const { boards, activeBoardId, nodes, edges } = get();
+    if (id === activeBoardId || !boards.some((b) => b.id === id)) return;
+    // 1. IMMEDIATE save of the outgoing board (direct, not the debounced autosave).
+    if (activeBoardId) await saveBoardContent(activeBoardId, nodes, edges);
+    // 2. Load the target; missing/corrupt content → empty board, no crash.
+    const content = await loadBoardContent(id);
+    withoutHistory(() => {
+      get().setNodes(content?.nodes ?? []);
+      get().setEdges(content?.edges ?? []);
+    });
+    // 3. Leave edit mode: pauses temporal tracking + clears undo history,
+    //    so undo/redo never leaks across boards.
+    get().exitEditMode();
+    // 4. Activate + persist the registry.
+    set({ activeBoardId: id, selectedNodeId: null });
+    await saveBoardsRegistry({ boards: get().boards, activeBoardId: id });
+  },
+  createBoard: async (name) => {
+    const id = `b-${crypto.randomUUID()}`;
+    const trimmed = name?.trim();
+    const meta: BoardMeta = { id, name: trimmed || `Board ${get().boards.length + 1}`, kind: 'user' };
+    set({ boards: [...get().boards, meta] });
+    // switchBoard saves the current board, loads the (empty) new one and persists the registry.
+    await get().switchBoard(id);
+    return id;
+  },
+  renameBoard: (id, name) => {
+    const trimmed = name.trim();
+    if (!trimmed || !get().boards.some((b) => b.id === id)) return;
+    const boards = get().boards.map((b) => (b.id === id ? { ...b, name: trimmed } : b));
+    set({ boards });
+    void saveBoardsRegistry({ boards, activeBoardId: get().activeBoardId });
+  },
+  deleteBoard: async (id) => {
+    const { boards } = get();
+    const target = boards.find((b) => b.id === id);
+    if (!target || target.kind === 'review') return; // review board is undeletable
+    if (boards.filter((b) => b.kind === 'user').length <= 1) return; // keep the last user board
+    const remaining = boards.filter((b) => b.id !== id);
+    let nextActive = get().activeBoardId;
+    if (nextActive === id) {
+      // The deleted board was active — fall back to the first remaining user board.
+      const fallback = remaining.find((b) => b.kind === 'user') ?? remaining[0];
+      const content = await loadBoardContent(fallback.id);
+      withoutHistory(() => {
+        get().setNodes(content?.nodes ?? []);
+        get().setEdges(content?.edges ?? []);
+      });
+      get().exitEditMode();
+      set({ selectedNodeId: null });
+      nextActive = fallback.id;
+    }
+    set({ boards: remaining, activeBoardId: nextActive });
+    await deleteBoardContent(id);
+    await saveBoardsRegistry({ boards: remaining, activeBoardId: nextActive });
+  },
+  ensureReviewBoard: () => {
+    const existing = get().boards.find((b) => b.kind === 'review');
+    if (existing) return existing.id;
+    const id = `b-${crypto.randomUUID()}`;
+    const meta: BoardMeta = { id, name: REVIEW_BOARD_NAME, kind: 'review' };
+    const boards = [...get().boards, meta];
+    set({ boards });
+    void saveBoardsRegistry({ boards, activeBoardId: get().activeBoardId });
+    return id;
   },
     }),
     {
