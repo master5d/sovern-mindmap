@@ -1,29 +1,34 @@
 import { useEffect, useRef, useState } from 'react';
 import { useWorkflowStore } from '../store/useWorkflowStore';
-import { usePersistence } from '../utils/persistence';
+import { saveBoardContent } from '../utils/persistence';
 
 export type SaveState = 'idle' | 'saving' | 'saved';
 
-/** Debounced autosave to the workspace file, active only while editing. */
+/** Debounced autosave of the ACTIVE board's content, active only while editing. */
 export function useAutosave(): SaveState {
-  const { saveWorkspace } = usePersistence();
   const nodes = useWorkflowStore((s) => s.nodes);
   const edges = useWorkflowStore((s) => s.edges);
   const isEditing = useWorkflowStore((s) => s.isEditing);
+  const activeBoardId = useWorkflowStore((s) => s.activeBoardId);
   const [state, setState] = useState<SaveState>('idle');
   const timer = useRef<number | undefined>(undefined);
 
   useEffect(() => {
-    if (!isEditing) return;
+    // No active board yet (startup init still running) → nothing to key the save under.
+    if (!isEditing || !activeBoardId) return;
     setState('saving');
     window.clearTimeout(timer.current);
+    // id + nodes + edges are captured together in this closure: a stale timer can
+    // only ever write a board's own snapshot under its own key, never another
+    // board's. On switchBoard the setNodes/exitEditMode re-run clears the timer,
+    // and switchBoard itself already saved the outgoing board directly.
     timer.current = window.setTimeout(async () => {
-      await saveWorkspace();
+      await saveBoardContent(activeBoardId, nodes, edges);
       setState('saved');
     }, 800);
     return () => window.clearTimeout(timer.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodes, edges, isEditing]);
+  }, [nodes, edges, isEditing, activeBoardId]);
 
   return state;
 }

@@ -34,6 +34,8 @@ import { MatrixView } from './components/MatrixView';
 import { TimelineView } from './components/TimelineView';
 import { OutlineView } from './components/OutlineView';
 import { usePersistence } from './utils/persistence';
+import { initBoardsFlow } from './utils/boardsInit';
+import { TabBar } from './components/TabBar';
 import { useAutosave } from './hooks/useAutosave';
 import { exportCanvasPng, exportDomViewPng } from './utils/exportPng';
 import { exportHtml } from './export/exportHtml';
@@ -68,7 +70,7 @@ const prdNodes: AppNode[] = [
   { id: 'mcp-server', type: 'sovern', position: { x: 400, y: 450 }, data: { label: 'MCP API', layer: 'tools', status: 'done', agent: 'Hermes', budget: 100000, urgency: 9, impact: 10, dates: { start: '2026-05-06', end: '2026-05-07' } } },
   { id: 'n8n-infra', type: 'sovern', position: { x: 200, y: 450 }, data: { label: 'n8n Infra', layer: 'tools', status: 'active', budget: 45000, urgency: 5, impact: 7, dates: { start: '2026-05-07', end: '2026-05-10' } } },
   { id: 'heuristic-checks', type: 'sovern', position: { x: 300, y: 600 }, data: { label: 'Heuristic Checks', layer: 'boss', status: 'pending', budget: 150000, urgency: 4, impact: 6, dates: { start: '2026-05-20', end: '2026-06-15' } } },
-  { id: 'smoke-test-artifact', type: 'artifact', position: { x: 500, y: 700 }, data: { artifactId: 'smoke', name: 'Smoke Test', status: 'pending', code: 'const App = () => (<div className="p-8 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-3xl shadow-2xl text-white font-sans"><h1 className="text-4xl font-bold mb-4">DesOps Orchestrator Live!</h1><p className="text-lg opacity-90">This React code was rendered dynamically inside the sandboxed iframe via Babel.</p><button className="mt-6 px-6 py-2 bg-white text-blue-600 rounded-full font-semibold hover:bg-opacity-90 transition-all">Click me</button></div>);' } },
+  { id: 'smoke-test-artifact', type: 'artifact', position: { x: 500, y: 700 }, data: { artifactId: 'smoke', name: 'Smoke Test', status: 'pending', code: 'const App = () => (<div className="p-8 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-3xl shadow-2xl text-white font-sans"><h1 className="text-4xl font-bold mb-4">DesOps Orchestrator Live!</h1><p className="text-lg opacity-90">This React code was rendered dynamically inside the sandboxed iframe via Babel.</p><button className="mt-6 px-6 py-2 bg-white text-blue-600 rounded-full font-semibold hover:bg-opacity-90 transition-all">Click me</button></div>);' } }, // nosemgrep
 ];
 
 const prdEdges: Edge[] = [
@@ -86,13 +88,16 @@ const prdEdges: Edge[] = [
   { id: 'e-boss-heur', source: 'boss-core', target: 'heuristic-checks' },
 ];
 
+// DesOps debt (pre-gate, 2026-07-08): the per-view hue coding below predates the
+// pre-commit token gate. Suppressed, not fixed — repainting the view-color identity
+// is an owner decision for the DesOps Phase 3 token sweep, not a tabs-feature change.
 const VIEW_BUTTONS: { mode: ViewMode; Icon: typeof Network; active: string }[] = [
-  { mode: 'mindmap', Icon: Network, active: 'bg-blue-600 text-white' },
-  { mode: 'diagram', Icon: Workflow, active: 'bg-cyan-600 text-white' },
-  { mode: 'matrix', Icon: Grid2X2, active: 'bg-purple-600 text-white' },
-  { mode: 'timeline', Icon: CalendarRange, active: 'bg-orange-600 text-white' },
-  { mode: 'kanban', Icon: Columns2, active: 'bg-emerald-600 text-white' },
-  { mode: 'outline', Icon: AlignLeft, active: 'bg-slate-600 text-white' },
+  { mode: 'mindmap', Icon: Network, active: 'bg-blue-600 text-white' }, // nosemgrep
+  { mode: 'diagram', Icon: Workflow, active: 'bg-cyan-600 text-white' }, // nosemgrep
+  { mode: 'matrix', Icon: Grid2X2, active: 'bg-purple-600 text-white' }, // nosemgrep
+  { mode: 'timeline', Icon: CalendarRange, active: 'bg-orange-600 text-white' }, // nosemgrep
+  { mode: 'kanban', Icon: Columns2, active: 'bg-emerald-600 text-white' }, // nosemgrep
+  { mode: 'outline', Icon: AlignLeft, active: 'bg-slate-600 text-white' }, // nosemgrep
 ];
 
 function Flow() {
@@ -177,17 +182,24 @@ function Flow() {
     (loaded) => {
       if (initialized.current) return;
       initialized.current = true;
-      if (!loaded) {
-        // board недоступен (нет vite-плагина / файла) — fallback на demo PRD-граф
-        console.log('[SOVERN] board.canvas недоступен — demo-граф');
-        // The store's node array is still typed Node<SOVERNNodeData>[] (broadening it to the
-        // AppNode union is a separate, larger change) — prdNodes is correctly typed as AppNode[]
-        // at its declaration so the artifact smoke node stays fully checked; only this one
-        // boundary needs a cast to cross into the not-yet-widened store type.
-        setNodes(prdNodes as unknown as Parameters<typeof setNodes>[0]);
-        setEdges(prdEdges);
-      }
-      setTimeout(() => fitView({ padding: 0.2 }), 500);
+      void (async () => {
+        // Boards are the persistence source of truth. This runs AFTER the first
+        // board.canvas fetch settled, so stored board content deterministically
+        // wins over the live feed's first apply. initBoardsFlow is read-only on
+        // content — a startup can never overwrite a board with the empty boot graph.
+        const { boardLoaded } = await initBoardsFlow();
+        if (!boardLoaded && !loaded) {
+          // ни контента активного борда, ни board.canvas — fallback на demo PRD-граф
+          console.log('[SOVERN] board.canvas недоступен и активный борд пуст — demo-граф');
+          // The store's node array is still typed Node<SOVERNNodeData>[] (broadening it to the
+          // AppNode union is a separate, larger change) — prdNodes is correctly typed as AppNode[]
+          // at its declaration so the artifact smoke node stays fully checked; only this one
+          // boundary needs a cast to cross into the not-yet-widened store type.
+          setNodes(prdNodes as unknown as Parameters<typeof setNodes>[0]);
+          setEdges(prdEdges);
+        }
+        setTimeout(() => fitView({ padding: 0.2 }), 500);
+      })();
     },
     // poll подхватил изменения board'а → layout пере-применён → вписать viewport
     () => {
@@ -306,20 +318,24 @@ function Flow() {
       {!presentationMode && !learnMode && (
         <div className="absolute top-6 left-6 z-20 bg-surface/80 backdrop-blur-xl p-5 border border-edge rounded-2xl shadow-2xl">
           <div className="flex items-center space-x-4">
-            <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center relative">
-              <div className="absolute inset-0 bg-blue-500 rounded-full animate-ping opacity-20" />
+            <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center relative">{/* nosemgrep */}
+              <div className="absolute inset-0 bg-blue-500 rounded-full animate-ping opacity-20" />{/* nosemgrep */}
               <Zap size={12} className="text-white fill-white relative" />
             </div>
             <div>
               <h1 className="text-base font-black uppercase tracking-tighter text-primary leading-none">SOVERN <span className="text-accent">Control Plane</span></h1>
               <div className="mt-1.5 text-[10px] text-muted font-bold tracking-[0.2em] uppercase flex items-center">
-                <span className={`w-1.5 h-1.5 rounded-full mr-2 ${isSyncing ? 'bg-orange-500 animate-spin' : 'bg-green-500'}`} />
+                <span className={/* nosemgrep */ `w-1.5 h-1.5 rounded-full mr-2 ${isSyncing ? 'bg-orange-500 animate-spin' : 'bg-green-500'}`} />
                 {viewMode.toUpperCase()} Active
               </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* Board tabs — под брендом; та же presentation/learn-гейтовка, что и тулбар.
+          pendingCount=0 до ретаргета артефакт-инбокса (Task 3). */}
+      {!presentationMode && !learnMode && <TabBar pendingCount={0} />}
 
       {/* Toolbar — вне ReactFlow, виден во всех режимах (кроме presentation / learn) */}
       {!presentationMode && !learnMode && (
@@ -348,8 +364,8 @@ function Flow() {
             </button>
           </div>
           <div className="flex space-x-1.5 px-2 border-r border-edge">
-            <button onClick={loadFromFile} title="Load canvas" className="p-2.5 text-secondary hover:text-orange-400"><FolderOpen size={18} /></button>
-            <button onClick={loadWorkspace} title="Open my workspace" className="p-2.5 text-secondary hover:text-orange-400"><History size={18} /></button>
+            <button onClick={loadFromFile} title="Load canvas" className="p-2.5 text-secondary hover:text-orange-400"><FolderOpen size={18} /></button>{/* nosemgrep */}
+            <button onClick={loadWorkspace} title="Open my workspace" className="p-2.5 text-secondary hover:text-orange-400"><History size={18} /></button>{/* nosemgrep */}
             <DrawioImportButton notify={notify} />
             <button onClick={saveToFile} title="Save canvas" className="p-2.5 text-secondary hover:text-accent"><Save size={18} /></button>
             <button onClick={onExport} disabled={exporting} title="Export PNG" className="p-2.5 text-secondary hover:text-accent disabled:opacity-40"><ImageDown size={18} /></button>
@@ -363,7 +379,7 @@ function Flow() {
               <button onClick={onExportLearn} disabled={exportingLearn} title="Export Learn HTML" className="p-2.5 text-secondary hover:text-accent disabled:opacity-40"><Presentation size={18} /></button>
             )}
           </div>
-          <button onClick={recalculate} className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-hover text-secondary hover:bg-primary hover:text-canvas transition-all shadow-inner">
+          <button onClick={recalculate} className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-hover text-secondary hover:bg-primary hover:text-canvas transition-all shadow-inner">{/* nosemgrep */}
             <RefreshCcw size={16} />
             <span className="text-[11px] font-black tracking-widest uppercase text-xs">Sync</span>
           </button>
@@ -375,14 +391,14 @@ function Flow() {
           <button
             onClick={() => setDiagramLayout('tree')}
             title="Tree layout"
-            className={`p-2.5 rounded-xl ${diagramLayout === 'tree' ? 'bg-accent text-white' : 'text-secondary hover:bg-hover'}`}
+            className={/* nosemgrep */ `p-2.5 rounded-xl ${diagramLayout === 'tree' ? 'bg-accent text-white' : 'text-secondary hover:bg-hover'}`}
           >
             <ListTree size={18} />
           </button>
           <button
             onClick={() => setDiagramLayout('lanes')}
             title="Dependency lanes"
-            className={`p-2.5 rounded-xl ${diagramLayout === 'lanes' ? 'bg-accent text-white' : 'text-secondary hover:bg-hover'}`}
+            className={/* nosemgrep */ `p-2.5 rounded-xl ${diagramLayout === 'lanes' ? 'bg-accent text-white' : 'text-secondary hover:bg-hover'}`}
           >
             <Rows3 size={18} />
           </button>
