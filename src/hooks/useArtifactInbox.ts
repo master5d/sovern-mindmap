@@ -25,13 +25,15 @@ const POLL_MS = 2000;
 const SINGLE_X = 120;
 const SINGLE_Y = 80;
 const GROUP_X_STEP = 640;
-const GROUP_Y_BANDS = [80, 560, 1040, 1520]; // finite band strip, cycled by hash
+const ROW_STEP = 480;
 
-/** Deterministic band index for a variant-group name so all its nodes share one y. */
-function groupBand(group: string): number {
-  let h = 0;
-  for (let i = 0; i < group.length; i++) h = (h * 31 + group.charCodeAt(i)) >>> 0;
-  return GROUP_Y_BANDS[h % GROUP_Y_BANDS.length];
+/** Lowest occupied artifact y on the board, or null when no artifact nodes exist. */
+function maxArtifactY(nodes: Node[]): number | null {
+  let max: number | null = null;
+  nodes.forEach((n) => {
+    if (n.type === 'artifact') max = max === null ? n.position.y : Math.max(max, n.position.y);
+  });
+  return max;
 }
 
 /**
@@ -54,13 +56,22 @@ export function ingestArtifacts(entries: ArtifactEntry[]): void {
   });
   if (fresh.length === 0) return;
 
-  // Count existing nodes per bucket so new nodes append after them rather than overlap.
+  // Layout: singles share row y=SINGLE_Y; each variant group OWNS a horizontal row.
+  // An existing group extends its own row (its first node's y, x past its right edge —
+  // hand-dragged rows are respected); a NEW group opens a fresh row below every artifact
+  // already on the board. Rows are allocated, never hashed — the old 4-band hash stacked
+  // distinct groups (smoke-e2e × ws-pill) pixel-exact on top of each other.
   let singleCount = nodes.filter((n) => n.type === 'artifact' && !(n.data as any)?.variantGroup).length;
-  const groupCounts = new Map<string, number>();
+  const groupRows = new Map<string, { y: number; nextX: number }>();
   nodes.forEach((n) => {
     const g = (n.data as any)?.variantGroup;
-    if (n.type === 'artifact' && typeof g === 'string') groupCounts.set(g, (groupCounts.get(g) ?? 0) + 1);
+    if (n.type !== 'artifact' || typeof g !== 'string') return;
+    const row = groupRows.get(g);
+    if (!row) groupRows.set(g, { y: n.position.y, nextX: n.position.x + GROUP_X_STEP });
+    else row.nextX = Math.max(row.nextX, n.position.x + GROUP_X_STEP);
   });
+  // First fresh row sits below both the singles row and every existing artifact.
+  let nextRowY = Math.max(maxArtifactY(nodes) ?? SINGLE_Y, SINGLE_Y) + ROW_STEP;
 
   const newNodes: Node<ArtifactNodeData>[] = fresh.map((e) => {
     const data: ArtifactNodeData = {
@@ -74,9 +85,14 @@ export function ingestArtifacts(entries: ArtifactEntry[]): void {
     };
     let position: { x: number; y: number };
     if (e.variant_group) {
-      const idx = groupCounts.get(e.variant_group) ?? 0;
-      groupCounts.set(e.variant_group, idx + 1);
-      position = { x: SINGLE_X + idx * GROUP_X_STEP, y: groupBand(e.variant_group) };
+      let row = groupRows.get(e.variant_group);
+      if (!row) {
+        row = { y: nextRowY, nextX: SINGLE_X };
+        groupRows.set(e.variant_group, row);
+        nextRowY += ROW_STEP;
+      }
+      position = { x: row.nextX, y: row.y };
+      row.nextX += GROUP_X_STEP;
     } else {
       position = { x: SINGLE_X + singleCount * GROUP_X_STEP, y: SINGLE_Y };
       singleCount += 1;
@@ -114,6 +130,49 @@ export function sweepUserBoardArtifacts(): void {
 }
 
 /**
+ * Repair pass for artifact nodes stacked at IDENTICAL positions — the legacy
+ * hash-band layout could collide two variant groups onto one row pixel-exact
+ * (headers rendered through each other). The group that claimed a contested
+ * position first stays put; every OTHER group with an exact-duplicate position
+ * is relocated wholesale to a fresh row below the board (intra-group x order
+ * preserved). Hand-dragged nodes are untouched: only exact x,y duplicates count.
+ * No-op on a clean board; runs without an undo step (background hygiene).
+ */
+export function repairArtifactOverlaps(): void {
+  const { nodes, setNodes } = useWorkflowStore.getState();
+  const artifacts = nodes.filter((n) => n.type === 'artifact');
+  if (artifacts.length < 2) return;
+  const groupOf = (n: Node) => ((n.data as any)?.variantGroup as string | undefined) ?? `~single~${n.id}`;
+  const firstAt = new Map<string, string>(); // "x:y" -> group that claimed the spot first
+  const displaced = new Set<string>();
+  artifacts.forEach((n) => {
+    const key = `${n.position.x}:${n.position.y}`;
+    const g = groupOf(n);
+    const claimed = firstAt.get(key);
+    if (claimed === undefined) firstAt.set(key, g);
+    else if (claimed !== g) displaced.add(g);
+  });
+  if (displaced.size === 0) return;
+  let nextRowY = Math.max(maxArtifactY(nodes) ?? SINGLE_Y, SINGLE_Y) + ROW_STEP;
+  const rowFor = new Map<string, number>();
+  displaced.forEach((g) => {
+    rowFor.set(g, nextRowY);
+    nextRowY += ROW_STEP;
+  });
+  const groupIdx = new Map<string, number>();
+  const repaired = nodes.map((n) => {
+    if (n.type !== 'artifact') return n;
+    const g = groupOf(n);
+    const rowY = rowFor.get(g);
+    if (rowY === undefined) return n;
+    const idx = groupIdx.get(g) ?? 0;
+    groupIdx.set(g, idx + 1);
+    return { ...n, position: { x: SINGLE_X + idx * GROUP_X_STEP, y: rowY } };
+  });
+  withoutHistory(() => setNodes(repaired as Node<SOVERNNodeData>[]));
+}
+
+/**
  * One poll tick against the store (no I/O — unit-tested directly):
  * - artifacts exist → `ensureReviewBoard()` (meta only, NO auto-switch);
  * - active board is the review board → ingest; otherwise the gate holds and
@@ -128,6 +187,7 @@ export function processArtifactPoll(entries: ArtifactEntry[]): number {
   const { boards, activeBoardId } = useWorkflowStore.getState();
   if (boards.find((b) => b.id === activeBoardId)?.kind === 'review') {
     ingestArtifacts(entries);
+    repairArtifactOverlaps(); // legacy hash-band stacks self-heal on the review board
   } else {
     sweepUserBoardArtifacts();
   }
