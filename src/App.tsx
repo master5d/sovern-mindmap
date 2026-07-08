@@ -5,7 +5,6 @@ import {
   ReactFlow,
   Controls,
   Background,
-  Node,
   Edge,
   useReactFlow,
   ReactFlowProvider,
@@ -42,7 +41,7 @@ import { exportDrawio } from './drawio/exportDrawio';
 import { exportLearnHtml } from './export/exportLearnHtml';
 import { useGraphKeyboard } from './hooks/useGraphKeyboard';
 import { useArtifactInbox } from './hooks/useArtifactInbox';
-import { SOVERNNodeData, SHAPE_KINDS, ShapeKind } from './types';
+import { SHAPE_KINDS, ShapeKind, AppNode } from './types';
 
 const nodeTypes = {
   sovern: SOVERNNode,
@@ -55,7 +54,7 @@ const nodeTypes = {
 // without writing to the store or re-creating a closure each render.
 const NOOP = () => {};
 
-const prdNodes: Node<SOVERNNodeData>[] = [
+const prdNodes: AppNode[] = [
   { id: 'root', type: 'sovern', position: { x: 500, y: 0 }, data: { label: 'SOVERN MindMap Control Plane', layer: 'human', status: 'active', budget: 0, urgency: 10, impact: 10, dates: { start: '2026-05-05', end: '2026-07-30' } } },
   { id: 'boss-core', type: 'sovern', position: { x: 500, y: 150 }, data: { label: 'System Orchestrator', layer: 'boss', status: 'active', agent: 'Hermes', urgency: 9, impact: 10 } },
   { id: 'p1-scaffold', type: 'sovern', position: { x: 200, y: 300 }, data: { label: 'Phase 1: Tauri Scaffold', layer: 'coding', status: 'done', budget: 50000, urgency: 10, impact: 8, dates: { start: '2026-05-05', end: '2026-05-06' } } },
@@ -69,7 +68,7 @@ const prdNodes: Node<SOVERNNodeData>[] = [
   { id: 'mcp-server', type: 'sovern', position: { x: 400, y: 450 }, data: { label: 'MCP API', layer: 'tools', status: 'done', agent: 'Hermes', budget: 100000, urgency: 9, impact: 10, dates: { start: '2026-05-06', end: '2026-05-07' } } },
   { id: 'n8n-infra', type: 'sovern', position: { x: 200, y: 450 }, data: { label: 'n8n Infra', layer: 'tools', status: 'active', budget: 45000, urgency: 5, impact: 7, dates: { start: '2026-05-07', end: '2026-05-10' } } },
   { id: 'heuristic-checks', type: 'sovern', position: { x: 300, y: 600 }, data: { label: 'Heuristic Checks', layer: 'boss', status: 'pending', budget: 150000, urgency: 4, impact: 6, dates: { start: '2026-05-20', end: '2026-06-15' } } },
-  { id: 'smoke-test-artifact', type: 'artifact' as any, position: { x: 500, y: 700 }, data: { artifactId: 'smoke', name: 'Smoke Test', status: 'pending', code: 'const App = () => (<div className="p-8 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-3xl shadow-2xl text-white font-sans"><h1 className="text-4xl font-bold mb-4">DesOps Orchestrator Live!</h1><p className="text-lg opacity-90">This React code was rendered dynamically inside the sandboxed iframe via Babel.</p><button className="mt-6 px-6 py-2 bg-white text-blue-600 rounded-full font-semibold hover:bg-opacity-90 transition-all">Click me</button></div>);' } },
+  { id: 'smoke-test-artifact', type: 'artifact', position: { x: 500, y: 700 }, data: { artifactId: 'smoke', name: 'Smoke Test', status: 'pending', code: 'const App = () => (<div className="p-8 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-3xl shadow-2xl text-white font-sans"><h1 className="text-4xl font-bold mb-4">DesOps Orchestrator Live!</h1><p className="text-lg opacity-90">This React code was rendered dynamically inside the sandboxed iframe via Babel.</p><button className="mt-6 px-6 py-2 bg-white text-blue-600 rounded-full font-semibold hover:bg-opacity-90 transition-all">Click me</button></div>);' } },
 ];
 
 const prdEdges: Edge[] = [
@@ -181,7 +180,11 @@ function Flow() {
       if (!loaded) {
         // board недоступен (нет vite-плагина / файла) — fallback на demo PRD-граф
         console.log('[SOVERN] board.canvas недоступен — demo-граф');
-        setNodes(prdNodes);
+        // The store's node array is still typed Node<SOVERNNodeData>[] (broadening it to the
+        // AppNode union is a separate, larger change) — prdNodes is correctly typed as AppNode[]
+        // at its declaration so the artifact smoke node stays fully checked; only this one
+        // boundary needs a cast to cross into the not-yet-widened store type.
+        setNodes(prdNodes as unknown as Parameters<typeof setNodes>[0]);
         setEdges(prdEdges);
       }
       setTimeout(() => fitView({ padding: 0.2 }), 500);
