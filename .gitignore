@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Runtime artifact inbox (JSONL, dev-machine local)
+.sovern/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
