@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:mcp": "tsc -p tsconfig.mcp.json",
     "preview": "vite preview",
     "test": "vitest run",
     "tauri": "tauri"

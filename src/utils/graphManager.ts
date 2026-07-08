@@ -1,7 +1,7 @@
-import { Edge } from '@xyflow/react';
-import { AppNode, SOVERNNodeData, JSONCanvas } from '../types';
-import { toJSONCanvas, fromJSONCanvas } from './canvasConverter';
-import { calculateBudgetRollup, calculateTimelineRollup } from './pmEngine';
+import type { Edge } from '@xyflow/react';
+import type { AppNode, SOVERNNodeData, JSONCanvas } from '../types/index.js';
+import { toJSONCanvas, fromJSONCanvas } from './canvasConverter.js';
+import { calculateBudgetRollup, calculateTimelineRollup } from './pmEngine.js';
 
 /**
  * The GraphManager handles the logic of graph manipulation that can be used by both 

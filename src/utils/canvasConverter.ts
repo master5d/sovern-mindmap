@@ -1,5 +1,5 @@
-import { Node, Edge } from '@xyflow/react';
-import { JSONCanvas, JSONCanvasNode, JSONCanvasEdge, SOVERNNodeData, ArtifactNodeData } from '../types';
+import type { Node, Edge } from '@xyflow/react';
+import type { JSONCanvas, JSONCanvasNode, JSONCanvasEdge, SOVERNNodeData, ArtifactNodeData } from '../types/index.js';
 
 /**
  * Converts React Flow nodes and edges to Obsidian-compatible JSON Canvas format.

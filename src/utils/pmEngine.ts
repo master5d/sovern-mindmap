@@ -1,5 +1,5 @@
-import { Node, Edge } from '@xyflow/react';
-import { SOVERNNodeData } from '../types';
+import type { Node, Edge } from '@xyflow/react';
+import type { SOVERNNodeData } from '../types/index.js';
 
 /**
  * Calculates budget roll-up using Bottom-Up DAG traversal.

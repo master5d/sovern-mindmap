@@ -5,7 +5,7 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { GraphManager } from "../utils/graphManager.js";
-import { AppNode, SOVERNLayer, NodeStatus } from "../types/index.js";
+import type { AppNode, SOVERNLayer, NodeStatus } from "../types/index.js";
 import { randomUUID } from 'crypto';
 import { appendArtifact, readDecisions } from "./artifactInbox.js";
 
