@@ -1,58 +1,63 @@
-# Инструкция: Подключение SOVERN MCP Server к ИИ-агентам
+# Agent Integration — sovern-canvas MCP
 
-Ваш **SOVERN MindMap Control Plane** теперь имеет встроенный MCP-сервер, который позволяет ИИ-агентам (Hermes, Claude Desktop, Cursor) видеть ваш проект и управлять им.
+SOVERN MindMap — не только canvas для человека, но и **design-review поверхность для агентов** (DesOps Pipeline v4, Phase 2). MCP-сервер `sovern-canvas` даёт агентам создавать UI-артефакты на живом холсте и читать вердикты человека.
 
-## 1. Сборка сервера
-
-Перед подключением необходимо убедиться, что сервер скомпилирован:
+## 1. Сборка и регистрация
 
 ```bash
-cd "01_Projects/MindMapping/sovern-mindmap"
-npm run build
+cd C:/telo/Efforts/On/MindMapping/sovern-mindmap
+npm run build:mcp          # обязательный шаг на свежем чекауте: dist-mcp/ gitignored
 ```
 
-## 2. Конфигурация для Claude Desktop
-
-Добавьте следующий блок в ваш файл конфигурации Claude Desktop (`%APPDATA%\Claude\claude_desktop_config.json` на Windows):
+Регистрация (уже сделана для Claude Code в `C:\telo\.mcp.json`):
 
 ```json
 {
   "mcpServers": {
-    "sovern-control-plane": {
+    "sovern-canvas": {
       "command": "node",
-      "args": [
-        "C:/telo/Efforts/On/MindMapping/sovern-mindmap/dist-mcp/server.js"
-      ],
-      "env": {
-        "NODE_ENV": "production"
-      }
+      "args": ["C:/telo/Efforts/On/MindMapping/sovern-mindmap/dist-mcp/mcp/server.js"]
     }
   }
 }
 ```
-*(Примечание: Убедитесь, что путь к `server.js` указан верно после сборки).*
 
-## 3. Доступные инструменты (Tools) для Агента
+Тот же блок подходит для Claude Desktop (`%APPDATA%\Claude\claude_desktop_config.json`) и других MCP-хостов.
 
-Теперь ваш агент может вызывать следующие команды:
+После любой правки `src/mcp/**` — пересобрать `npm run build:mcp`, иначе тулы работают на старом коде.
 
-1.  `read_graph` — получить всю карту в формате JSON Canvas.
-2.  `create_node` — создать новую задачу (нужно указать `label`, `layer` и опционально `parent_id`).
-3.  `update_node` — изменить статус, бюджет или текст задачи.
-4.  `calculate_budget_rollup` — спросить агента: "Сколько всего стоит эта ветка?".
+## 2. Инструменты
 
-## 4. Примеры промптов для Hermes
+| Tool | Параметры | Что делает |
+|---|---|---|
+| `create_artifact_node` | `code` (обяз., React-код с корневым `App`), `name`, `variant_group`, `project_dir` | Кладёт артефакт в inbox → через ≤2s появляется нодой на живом canvas. Вариации одной `variant_group` ложатся в ряд (галерея). `project_dir` включает экспорт approved-кода в `<project>\design\drafts\` |
+| `read_artifact_decisions` | `variant_group?` | Возвращает вердикты человека (approved/rejected + exportedTo) — замыкание петли review |
+| `read_graph` | — | Вся карта в JSON Canvas |
+| `create_node` | `label`, `layer`, `parent_id?`, `status?`, `budget?` | Обычная SOVERN-нода (⚠️ пишет во внутренний граф MCP-процесса, НЕ на живой canvas — мост построен только для артефактов) |
+| `update_node`, `calculate_budget_rollup` | см. схемы | Как create_node — внутренний граф |
 
-Теперь вы можете отдавать Hermes (Boss Agent) такие команды:
+## 3. Как работает мост (artifact bridge)
 
-*   *"Hermes, посмотри на мой Control Plane и скажи, какие задачи сейчас заблокированы (blocked)?"*
-*   *"Проанализируй ветку разработки MCP и декомпозируй задачу 'Frontend Integration' на 3 подзадачи в слое Coding."*
-*   *"Обнови статус задачи 'Tailwind Setup' на 'done' и пересчитай общий бюджет проекта."*
+```
+агент → MCP create_artifact_node → .sovern/artifact-inbox.jsonl (append-only JSONL)
+   живой canvas (vite :1420) ── GET /api/artifacts (poll 2s, мержит decisions) → нода ArtifactNode
+   человек: ✓ Approve / ✗ Reject на ноде → .sovern/artifact-decisions.jsonl (+export файла при projectDir)
+   агент → read_artifact_decisions → видит вердикт и exportedTo
+```
 
-## 5. Безопасность (Human-in-the-loop)
+- Canvas должен быть запущен: `npm run dev` (порт **1420 strictPort**). Без него артефакты копятся в inbox и появятся при следующем старте — уже со статусами из decisions-ledger.
+- iframe артефакта получает **DesOps-токены хаба** (`/desops/tokens.css` ← `NAUTILUS/core/desops/ui-kit/globals.css`) + tailwind-маппинг семантических классов (`bg-primary`, `text-text-secondary`, `bg-surface`...) + текущую тему приложения. Пишите код артефактов ТОЛЬКО на семантических классах.
+- Артефакт-ноды переживают Save/Load через JSON Canvas (`metadata['mm:artifact']`).
 
-Согласно вашему PRD, деструктивные действия (удаление крупных веток или изменение бюджета более чем на 10%) должны проходить через ваше подтверждение. На текущем этапе агент будет предлагать изменения, а вы будете видеть их результат на визуальном холсте.
+## 4. Кто этим пользуется
+
+Субагент **`desops-orchestrator`** (user scope, `~/.claude/agents/`) — штатный генератор UI DesOps-конвейера: Master Cycle, 3+ вариации на группу, никакого кода в чат. Definition: `NAUTILUS/core/desops/agent-layer/agents/desops-orchestrator.md`. Полная картина конвейера: `NAUTILUS/core/desops/README.md`.
+
+## 5. Безопасность
+
+- Экспорт пишет только внутрь `C:\telo\**\design\drafts\` (path-контейнмент на `path.resolve`, kebab-санитизация имени; код берётся из inbox по id — POST-телу не доверяем).
+- iframe: `sandbox="allow-scripts"` без `allow-same-origin` — код артефакта не достаёт до origin/хранилища приложения.
+- Human-in-the-loop: агент не может сам одобрить артефакт — вердикты только с canvas.
 
 ---
-**SOVERN v3.3 · MindMap Control Plane**
-*Визуализируй. Управляй. Масштабируй.*
+**SOVERN v3.4 · MindMap Control Plane + DesOps Canvas**
