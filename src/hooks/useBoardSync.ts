@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useWorkflowStore } from '../store/useWorkflowStore';
+import { loadBoardsRegistry } from '../utils/persistence';
 import { fromJSONCanvas } from '../utils/canvasConverter';
 
 const POLL_MS = 3000;
@@ -35,14 +36,28 @@ export const useBoardSync = (
           if (first) onFirstLoadRef.current(true);
           return; // finally{} перепланирует следующий tick
         }
+        // Multi-board data safety: when a boards registry exists, the boards system
+        // owns canvas content and the feed renders ONLY on its own service tab
+        // (kind 'file' — a live mirror of the repo file, never persisted to a board
+        // key). Applying to any other tab — including the FIRST apply — is forbidden:
+        // StrictMode runs the effect twice, and a stray first-apply landing after
+        // initBoardsFlow flooded the active board with board.canvas content that the
+        // next tab switch persisted under the board's key. Fresh installs without a
+        // registry keep the legacy live-feed-as-main-canvas behavior.
+        const registry = await loadBoardsRegistry();
+        if (!alive) return;
+        if (registry) {
+          const store = useWorkflowStore.getState();
+          if (store.boards.length > 0) store.ensureFileBoard();
+          const active = store.boards.find((b) => b.id === store.activeBoardId);
+          if (active?.kind !== 'file') {
+            // Don't consume lastText — switching to the file tab must re-apply.
+            if (first) onFirstLoadRef.current(true);
+            return;
+          }
+        }
         if (text !== lastText.current) {
           lastText.current = text;
-          // Multi-board data safety: once the boards registry is live, a mid-session
-          // board.canvas change must NOT overwrite the active board — the debounced
-          // autosave would then persist foreign content under the board's key.
-          // The first apply still happens (initBoardsFlow runs after it and stored
-          // board content deterministically wins).
-          if (!first && useWorkflowStore.getState().activeBoardId) return;
           const { nodes, edges } = fromJSONCanvas(JSON.parse(text));
           const store = useWorkflowStore.getState();
           store.setNodes(nodes);

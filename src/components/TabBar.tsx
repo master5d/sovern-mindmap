@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import type React from 'react';
-import { Plus, X, Palette } from 'lucide-react';
+import { Plus, X, Palette, FileText } from 'lucide-react';
 import { useWorkflowStore } from '../store/useWorkflowStore';
 import type { BoardMeta } from '../store/useWorkflowStore';
 
-/** A user board is closable only while another user board remains; review — never. */
+/** A user board is closable only while another user board remains; service boards (review/file) — never. */
 export function canCloseBoard(board: BoardMeta, boards: BoardMeta[]): boolean {
   return board.kind === 'user' && boards.filter((b) => b.kind === 'user').length > 1;
 }
@@ -62,6 +62,7 @@ export function TabBar({ pendingCount }: { pendingCount: number }) {
             }`}
           >
             {b.kind === 'review' && <Palette size={12} className="text-accent shrink-0" />}
+            {b.kind === 'file' && <FileText size={12} className="text-secondary shrink-0" />}
             {editingId === b.id ? (
               <input
                 autoFocus

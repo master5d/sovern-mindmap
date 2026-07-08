@@ -25,14 +25,17 @@ import {
 export type ViewMode = 'mindmap' | 'diagram' | 'matrix' | 'timeline' | 'kanban' | 'outline';
 export type DiagramLayout = 'tree' | 'lanes';
 
-/** One canvas tab. `review` = the service «Design Review» board (artifact inbox). */
+/** One canvas tab. `review` = the service «Design Review» board (artifact inbox);
+ * `file` = the live read-only mirror of the repo's /board.canvas feed (its content
+ * is never persisted to a board key — the file is the source of truth). */
 export interface BoardMeta {
   id: string;
   name: string;
-  kind: 'user' | 'review';
+  kind: 'user' | 'review' | 'file';
 }
 
 export const REVIEW_BOARD_NAME = 'Design Review';
+export const FILE_BOARD_NAME = 'board.canvas (live)';
 
 /**
  * Spec: artifact nodes live ONLY on the review board. Strips `artifact` nodes
@@ -111,6 +114,7 @@ interface WorkflowState {
   renameBoard: (id: string, name: string) => void;
   deleteBoard: (id: string) => Promise<void>;
   ensureReviewBoard: () => string;
+  ensureFileBoard: () => string;
 }
 
 /**
@@ -374,7 +378,9 @@ export const useWorkflowStore = create<WorkflowState>()(
     const { boards, activeBoardId, nodes, edges } = get();
     if (id === activeBoardId || !boards.some((b) => b.id === id)) return;
     // 1. IMMEDIATE save of the outgoing board (direct, not the debounced autosave).
-    if (activeBoardId) await saveBoardContent(activeBoardId, nodes, edges);
+    //    `file` boards mirror /board.canvas — their content is never persisted.
+    const outgoing = boards.find((b) => b.id === activeBoardId);
+    if (activeBoardId && outgoing?.kind !== 'file') await saveBoardContent(activeBoardId, nodes, edges);
     // 2. Load the target; missing/corrupt content → empty board, no crash.
     //    User boards are swept of stray artifact nodes BEFORE render (spec:
     //    artifacts live only on the review board); autosave persists the fix.
@@ -414,7 +420,7 @@ export const useWorkflowStore = create<WorkflowState>()(
   deleteBoard: async (id) => {
     const { boards } = get();
     const target = boards.find((b) => b.id === id);
-    if (!target || target.kind === 'review') return; // review board is undeletable
+    if (!target || target.kind !== 'user') return; // service boards (review/file) are undeletable
     if (boards.filter((b) => b.kind === 'user').length <= 1) return; // keep the last user board
     const remaining = boards.filter((b) => b.id !== id);
     let nextActive = get().activeBoardId;
@@ -443,6 +449,16 @@ export const useWorkflowStore = create<WorkflowState>()(
     if (existing) return existing.id;
     const id = `b-${crypto.randomUUID()}`;
     const meta: BoardMeta = { id, name: REVIEW_BOARD_NAME, kind: 'review' };
+    const boards = [...get().boards, meta];
+    set({ boards });
+    void saveBoardsRegistry({ boards, activeBoardId: get().activeBoardId });
+    return id;
+  },
+  ensureFileBoard: () => {
+    const existing = get().boards.find((b) => b.kind === 'file');
+    if (existing) return existing.id;
+    const id = `b-${crypto.randomUUID()}`;
+    const meta: BoardMeta = { id, name: FILE_BOARD_NAME, kind: 'file' };
     const boards = [...get().boards, meta];
     set({ boards });
     void saveBoardsRegistry({ boards, activeBoardId: get().activeBoardId });

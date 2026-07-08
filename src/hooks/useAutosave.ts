@@ -10,12 +10,15 @@ export function useAutosave(): SaveState {
   const edges = useWorkflowStore((s) => s.edges);
   const isEditing = useWorkflowStore((s) => s.isEditing);
   const activeBoardId = useWorkflowStore((s) => s.activeBoardId);
+  const activeKind = useWorkflowStore((s) => s.boards.find((b) => b.id === s.activeBoardId)?.kind);
   const [state, setState] = useState<SaveState>('idle');
   const timer = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     // No active board yet (startup init still running) → nothing to key the save under.
-    if (!isEditing || !activeBoardId) return;
+    // `file` boards mirror /board.canvas: the repo file is the source of truth,
+    // in-app edits there are volatile and must never persist to a board key.
+    if (!isEditing || !activeBoardId || activeKind === 'file') return;
     setState('saving');
     window.clearTimeout(timer.current);
     // id + nodes + edges are captured together in this closure: a stale timer can
@@ -28,7 +31,7 @@ export function useAutosave(): SaveState {
     }, 800);
     return () => window.clearTimeout(timer.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodes, edges, isEditing, activeBoardId]);
+  }, [nodes, edges, isEditing, activeBoardId, activeKind]);
 
   return state;
 }
