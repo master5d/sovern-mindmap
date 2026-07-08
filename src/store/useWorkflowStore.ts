@@ -77,7 +77,7 @@ interface WorkflowState {
  * around the follow-ups so one Ctrl+Z reverses the whole edit. Restores the prior
  * tracking state (history stays paused outside edit sessions).
  */
-function withoutHistory(fn: () => void): void {
+export function withoutHistory(fn: () => void): void {
   const temporalStore = useWorkflowStore?.temporal;
   if (!temporalStore) {
     fn();

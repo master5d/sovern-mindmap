@@ -41,6 +41,7 @@ import { exportHtml } from './export/exportHtml';
 import { exportDrawio } from './drawio/exportDrawio';
 import { exportLearnHtml } from './export/exportLearnHtml';
 import { useGraphKeyboard } from './hooks/useGraphKeyboard';
+import { useArtifactInbox } from './hooks/useArtifactInbox';
 import { SOVERNNodeData, SHAPE_KINDS, ShapeKind } from './types';
 
 const nodeTypes = {
@@ -212,6 +213,7 @@ function Flow() {
   // Learn mode is read-only: the editor's authoring keys (Tab/Enter/F2/Delete/paste)
   // must be gated off so a stray keypress can't mutate the graph or undo history.
   useGraphKeyboard(isCanvasView && !learnMode);
+  useArtifactInbox();
   const displayEdges = !isCanvasView
     ? []
     : viewMode === 'diagram'
