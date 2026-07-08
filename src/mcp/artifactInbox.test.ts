@@ -36,4 +36,31 @@ describe('artifactInbox', () => {
     expect(d.id).toMatch(/[0-9a-f-]{36}/);
     expect(readDecisions()).toEqual([expect.objectContaining({ artifactId: 'abc-123', decision: 'approved' })]);
   });
+
+  it('readArtifactsWithDecisions: undecided artifact has no decision field', async () => {
+    const { appendArtifact, readArtifactsWithDecisions } = await import('./artifactInbox');
+    const a = appendArtifact({ code: 'const App=()=>null;', name: 'Pending' });
+    const rows = readArtifactsWithDecisions();
+    expect(rows).toEqual([expect.objectContaining({ id: a.id, name: 'Pending' })]);
+    expect(rows[0].decision).toBeUndefined();
+  });
+
+  it('readArtifactsWithDecisions: decided artifact carries decision + exportedTo', async () => {
+    const { appendArtifact, appendDecision, readArtifactsWithDecisions } = await import('./artifactInbox');
+    const a = appendArtifact({ code: 'const App=()=>null;', name: 'Approved' });
+    appendDecision({ artifactId: a.id, decision: 'approved', name: 'Approved', exportedTo: '/tmp/foo.tsx' });
+    const rows = readArtifactsWithDecisions();
+    expect(rows).toEqual([
+      expect.objectContaining({ id: a.id, decision: 'approved', exportedTo: '/tmp/foo.tsx' }),
+    ]);
+  });
+
+  it('readArtifactsWithDecisions: last decision write wins for a given artifact', async () => {
+    const { appendArtifact, appendDecision, readArtifactsWithDecisions } = await import('./artifactInbox');
+    const a = appendArtifact({ code: 'const App=()=>null;', name: 'Flippy' });
+    appendDecision({ artifactId: a.id, decision: 'rejected', name: 'Flippy' });
+    appendDecision({ artifactId: a.id, decision: 'approved', name: 'Flippy' });
+    const rows = readArtifactsWithDecisions();
+    expect(rows[0].decision).toBe('approved');
+  });
 });

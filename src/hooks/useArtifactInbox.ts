@@ -7,7 +7,9 @@ import { Node } from '@xyflow/react';
 import { useWorkflowStore, withoutHistory } from '../store/useWorkflowStore';
 import { ArtifactNodeData, SOVERNNodeData } from '../types';
 
-/** Wire shape from GET /api/artifacts (snake_case, matches src/mcp/artifactInbox.ts). */
+/** Wire shape from GET /api/artifacts (snake_case, matches src/mcp/artifactInbox.ts).
+ * `decision`/`exportedTo` are server-merged from the decisions ledger (Fix 1: an
+ * already-decided artifact must not re-ingest as 'pending' on a fresh canvas). */
 export interface ArtifactEntry {
   id: string;
   ts: string;
@@ -15,6 +17,8 @@ export interface ArtifactEntry {
   name?: string;
   variant_group?: string;
   project_dir?: string;
+  decision?: 'approved' | 'rejected';
+  exportedTo?: string;
 }
 
 const POLL_MS = 2000;
@@ -64,8 +68,9 @@ export function ingestArtifacts(entries: ArtifactEntry[]): void {
       code: e.code,
       name: e.name,
       variantGroup: e.variant_group,
-      status: 'pending',
+      status: e.decision ?? 'pending',
       projectDir: e.project_dir,
+      exportedTo: e.exportedTo,
     };
     let position: { x: number; y: number };
     if (e.variant_group) {

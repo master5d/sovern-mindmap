@@ -3,6 +3,11 @@ import { useWorkflowStore } from '../store/useWorkflowStore';
 import { ingestArtifacts } from './useArtifactInbox';
 
 const entry = (id: string, g?: string) => ({ id, ts: '2026-07-07', code: 'const App=()=>null;', name: id, variant_group: g });
+const decidedEntry = (id: string, decision: 'approved' | 'rejected', exportedTo?: string) => ({
+  ...entry(id),
+  decision,
+  exportedTo,
+});
 
 describe('ingestArtifacts', () => {
   beforeEach(() => useWorkflowStore.getState().setNodes([]));
@@ -30,6 +35,19 @@ describe('ingestArtifacts', () => {
     expect(new Set(xs).size).toBe(3);
     const ys = useWorkflowStore.getState().nodes.filter(n => (n.data as any).variantGroup === 'g').map(n => n.position.y);
     expect(new Set(ys).size).toBe(1);
+  });
+
+  it('honors a server-merged decision instead of defaulting to pending', () => {
+    ingestArtifacts([decidedEntry('d1', 'rejected')]);
+    const n = useWorkflowStore.getState().nodes.find(n => (n.data as any).artifactId === 'd1');
+    expect((n?.data as any).status).toBe('rejected');
+  });
+
+  it('carries exportedTo through for an approved+exported artifact', () => {
+    ingestArtifacts([decidedEntry('d2', 'approved', 'C:/proj/design/drafts/foo.tsx')]);
+    const n = useWorkflowStore.getState().nodes.find(n => (n.data as any).artifactId === 'd2');
+    expect((n?.data as any).status).toBe('approved');
+    expect((n?.data as any).exportedTo).toBe('C:/proj/design/drafts/foo.tsx');
   });
 
   it('does not pollute undo history', () => {

@@ -42,10 +42,6 @@ function decisionsPath(): string {
   return join(inboxDir(), 'artifact-decisions.jsonl');
 }
 
-/** Default paths resolved once at import time (informational; functions below re-resolve lazily). */
-export const INBOX_PATH = inboxPath();
-export const DECISIONS_PATH = decisionsPath();
-
 function readJsonlEntries<T>(path: string): T[] {
   if (!existsSync(path)) return [];
   const raw = readFileSync(path, 'utf-8');
@@ -85,4 +81,35 @@ export function appendDecision(d: Omit<DecisionEntry, 'id' | 'ts'>): DecisionEnt
 
 export function readDecisions(): DecisionEntry[] {
   return readJsonlEntries<DecisionEntry>(decisionsPath());
+}
+
+export interface ArtifactWithDecision extends ArtifactEntry {
+  decision?: 'approved' | 'rejected';
+  exportedTo?: string;
+}
+
+/**
+ * Server-side reconciliation: merges the append-only artifact inbox with the
+ * decisions ledger so a fresh canvas doesn't re-ingest already-decided
+ * artifacts as 'pending'. Last decision write wins per artifactId; when the
+ * latest decision for an id repeats the same verdict but drops exportedTo
+ * (e.g. a plain approve followed by re-reading, or reordered writes), the
+ * earlier exportedTo is preserved rather than lost.
+ */
+export function readArtifactsWithDecisions(): ArtifactWithDecision[] {
+  const decisions = readDecisions();
+  const latestByArtifactId = new Map<string, DecisionEntry>();
+  for (const d of decisions) {
+    const existing = latestByArtifactId.get(d.artifactId);
+    if (existing && existing.decision === d.decision && !d.exportedTo && existing.exportedTo) {
+      latestByArtifactId.set(d.artifactId, { ...d, exportedTo: existing.exportedTo });
+    } else {
+      latestByArtifactId.set(d.artifactId, d);
+    }
+  }
+  return readArtifacts().map((a) => {
+    const decision = latestByArtifactId.get(a.id);
+    if (!decision) return a;
+    return { ...a, decision: decision.decision, exportedTo: decision.exportedTo };
+  });
 }

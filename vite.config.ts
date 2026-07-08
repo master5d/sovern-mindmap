@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { dirname, join, resolve, sep } from 'node:path';
-import { readArtifacts, appendDecision } from './src/mcp/artifactInbox';
+import { readArtifacts, readArtifactsWithDecisions, appendDecision } from './src/mcp/artifactInbox';
 
 // Путь к board.canvas: env SOVERN_BOARD или дефолт — mc_hub feedback board.
 const BOARD_PATH =
@@ -101,7 +101,7 @@ const serveArtifacts = (): Plugin => ({
         res.setHeader('Content-Type', 'application/json');
         res.setHeader('Cache-Control', 'no-store');
         try {
-          res.end(JSON.stringify({ artifacts: readArtifacts() }));
+          res.end(JSON.stringify({ artifacts: readArtifactsWithDecisions() }));
         } catch (e: any) {
           res.statusCode = 500;
           res.end(JSON.stringify({ ok: false, error: String(e) }));

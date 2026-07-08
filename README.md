@@ -91,6 +91,16 @@ npm run dev
 
 ---
 
+## 🔌 sovern-canvas MCP
+
+The MCP server (`src/mcp`) exposes `create_artifact_node` and `read_artifact_decisions` so DesOps agents can drop generated UI variants onto the live canvas (:1420) and read back human approve/reject decisions. It ships as a **separate build target**, not part of the Vite/Tauri app bundle:
+
+*   **Build once per checkout:** `npm run build:mcp` — emits `dist-mcp/` (gitignored; not committed, not produced by `npm run dev`/`npm run build`).
+*   **Registration:** the built server is registered in `C:\telo\.mcp.json` — re-run the build after a fresh clone or after editing anything under `src/mcp/` before the tools will pick up changes.
+*   **Runtime bridge:** the canvas dev server (`vite.config.ts`) polls the same `.sovern/artifact-inbox.jsonl` / `artifact-decisions.jsonl` ledger every 2s via `GET /api/artifacts`, so artifact nodes created through the MCP tools appear on the canvas without a page reload, already reconciled with any prior decision (an artifact that was already approved/rejected in an earlier session re-ingests with that status, not `pending`).
+
+---
+
 ## 📂 Project Structure
 
 *   [`/src/mcp`](./src/mcp) — MCP Server implementation for AI agents.
