@@ -5,7 +5,10 @@ import {
   loadBoardsRegistry,
   loadBoardContent,
   migrateLegacyWorkspace,
+  saveBoardContent,
+  saveBoardsRegistry,
 } from '../utils/persistence';
+import { initBoardsFlow } from '../utils/boardsInit';
 
 const node = (id: string, label: string) => ({
   id,
@@ -86,6 +89,47 @@ describe('switchBoard', () => {
     expect(s.activeBoardId).toBe('board-b');
     expect(s.nodes).toEqual([]);
     expect(s.edges).toEqual([]);
+  });
+});
+
+// Task 3 carry-over sweep: artifact nodes live ONLY on the review board — any
+// persisted into a user board during the Task-2 era are stripped at load time.
+const artifactNode = (id: string) => ({
+  id: `artifact-${id}`,
+  type: 'artifact' as const,
+  position: { x: 0, y: 0 },
+  data: { artifactId: id, code: 'const X=()=>null;', status: 'pending' as const },
+});
+
+describe('artifact sweep on board load', () => {
+  it('switchBoard strips persisted artifact nodes from a user board', async () => {
+    await saveBoardContent('board-b', [node('n1', 'beta node'), artifactNode('stray')] as any, []);
+    useWorkflowStore.getState().initBoards({ boards: [boardA, boardB], activeBoardId: 'board-a' });
+
+    await useWorkflowStore.getState().switchBoard('board-b');
+
+    const s = useWorkflowStore.getState();
+    expect(s.nodes.map((n) => n.id)).toEqual(['n1']); // artifact gone, user node kept
+  });
+
+  it('switchBoard keeps artifact nodes when loading the review board', async () => {
+    useWorkflowStore.getState().initBoards({ boards: [boardA], activeBoardId: 'board-a' });
+    const reviewId = useWorkflowStore.getState().ensureReviewBoard();
+    await saveBoardContent(reviewId, [artifactNode('keep')] as any, []);
+
+    await useWorkflowStore.getState().switchBoard(reviewId);
+
+    expect(useWorkflowStore.getState().nodes.filter((n) => n.type === 'artifact')).toHaveLength(1);
+  });
+
+  it('initBoardsFlow strips artifact nodes from the loaded active user board', async () => {
+    await saveBoardsRegistry({ boards: [boardA], activeBoardId: 'board-a' });
+    await saveBoardContent('board-a', [node('n1', 'alpha node'), artifactNode('stray')] as any, []);
+
+    const { boardLoaded } = await initBoardsFlow();
+
+    expect(boardLoaded).toBe(true);
+    expect(useWorkflowStore.getState().nodes.map((n) => n.id)).toEqual(['n1']);
   });
 });
 

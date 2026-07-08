@@ -228,7 +228,9 @@ function Flow() {
   // Learn mode is read-only: the editor's authoring keys (Tab/Enter/F2/Delete/paste)
   // must be gated off so a stray keypress can't mutate the graph or undo history.
   useGraphKeyboard(isCanvasView && !learnMode);
-  useArtifactInbox();
+  // Gated inbox poll: ingests onto the Design Review board only; returns the
+  // live count of artifacts awaiting a decision for the review-tab badge.
+  const pendingCount = useArtifactInbox();
   const displayEdges = !isCanvasView
     ? []
     : viewMode === 'diagram'
@@ -334,8 +336,8 @@ function Flow() {
       )}
 
       {/* Board tabs — под брендом; та же presentation/learn-гейтовка, что и тулбар.
-          pendingCount=0 до ретаргета артефакт-инбокса (Task 3). */}
-      {!presentationMode && !learnMode && <TabBar pendingCount={0} />}
+          pendingCount = живой счётчик артефактов без решения (артефакт-инбокс). */}
+      {!presentationMode && !learnMode && <TabBar pendingCount={pendingCount} />}
 
       {/* Toolbar — вне ReactFlow, виден во всех режимах (кроме presentation / learn) */}
       {!presentationMode && !learnMode && (

@@ -2,9 +2,9 @@
 // newly-generated artifacts and ingests them as `artifact` canvas nodes.
 // `ingestArtifacts` is the pure, store-level half — it is what's unit-tested;
 // `useArtifactInbox` is a thin timer/fetch wrapper mounted once in App.
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Node } from '@xyflow/react';
-import { useWorkflowStore, withoutHistory } from '../store/useWorkflowStore';
+import { useWorkflowStore, withoutHistory, stripArtifactContent } from '../store/useWorkflowStore';
 import { ArtifactNodeData, SOVERNNodeData } from '../types';
 
 /** Wire shape from GET /api/artifacts (snake_case, matches src/mcp/artifactInbox.ts).
@@ -95,11 +95,53 @@ export function ingestArtifacts(entries: ArtifactEntry[]): void {
 }
 
 /**
- * Background poll: fetches `/api/artifacts` every 2s and ingests any new
- * entries. Silent on failure — the Tauri production build has no dev-server
- * middleware, so a missing endpoint must not surface as an error.
+ * Sweep stray `artifact` nodes off the ACTIVE user board (spec: artifacts live
+ * ONLY on the review board). One-time cleanup for boards polluted before the
+ * inbox was board-gated; a no-op on the review board, on a clean board, and
+ * before boards are initialized. Runs without an undo step — this is background
+ * hygiene, not a hand-edit; the corrected content persists via normal autosave.
  */
-export function useArtifactInbox(): void {
+export function sweepUserBoardArtifacts(): void {
+  const { boards, activeBoardId, nodes, edges, setNodes, setEdges } = useWorkflowStore.getState();
+  const active = boards.find((b) => b.id === activeBoardId);
+  if (!active || active.kind === 'review') return;
+  const clean = stripArtifactContent(nodes, edges);
+  if (clean.nodes === nodes) return; // nothing stripped
+  withoutHistory(() => {
+    setNodes(clean.nodes);
+    setEdges(clean.edges);
+  });
+}
+
+/**
+ * One poll tick against the store (no I/O — unit-tested directly):
+ * - artifacts exist → `ensureReviewBoard()` (meta only, NO auto-switch);
+ * - active board is the review board → ingest; otherwise the gate holds and
+ *   any stray artifact nodes are swept off the active user board;
+ * - returns the number of artifacts still awaiting a decision (tab badge).
+ */
+export function processArtifactPoll(entries: ArtifactEntry[]): number {
+  const store = useWorkflowStore.getState();
+  // Guard boards.length: never mint review-board meta into an uninitialized
+  // registry (poll can tick before initBoardsFlow settles at startup).
+  if (entries.length > 0 && store.boards.length > 0) store.ensureReviewBoard();
+  const { boards, activeBoardId } = useWorkflowStore.getState();
+  if (boards.find((b) => b.id === activeBoardId)?.kind === 'review') {
+    ingestArtifacts(entries);
+  } else {
+    sweepUserBoardArtifacts();
+  }
+  return entries.filter((e) => !e.decision).length;
+}
+
+/**
+ * Background poll: fetches `/api/artifacts` every 2s and runs a gated ingest
+ * tick (see processArtifactPoll). Silent on failure — the Tauri production
+ * build has no dev-server middleware, so a missing endpoint must not surface
+ * as an error. Returns the live pending-decision count for the review-tab badge.
+ */
+export function useArtifactInbox(): number {
+  const [pendingCount, setPendingCount] = useState(0);
   useEffect(() => {
     let cancelled = false;
     const tick = async () => {
@@ -107,7 +149,9 @@ export function useArtifactInbox(): void {
         const res = await fetch('/api/artifacts');
         if (!res.ok) return;
         const json = await res.json();
-        if (!cancelled && Array.isArray(json?.artifacts)) ingestArtifacts(json.artifacts);
+        if (!cancelled && Array.isArray(json?.artifacts)) {
+          setPendingCount(processArtifactPoll(json.artifacts));
+        }
       } catch {
         // no middleware (Tauri prod) or transient network error — skip silently
       }
@@ -118,4 +162,5 @@ export function useArtifactInbox(): void {
       clearInterval(id);
     };
   }, []);
+  return pendingCount;
 }

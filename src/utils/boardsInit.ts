@@ -1,5 +1,5 @@
 import { loadBoardsRegistry, migrateLegacyWorkspace, loadBoardContent } from './persistence';
-import { useWorkflowStore, withoutHistory } from '../store/useWorkflowStore';
+import { useWorkflowStore, withoutHistory, stripArtifactContent } from '../store/useWorkflowStore';
 
 /**
  * Startup path for Canvas Project Tabs:
@@ -22,9 +22,15 @@ export async function initBoardsFlow(): Promise<{ boardLoaded: boolean }> {
   useWorkflowStore.getState().initBoards(reg);
   const content = await loadBoardContent(reg.activeBoardId);
   if (!content) return { boardLoaded: false };
+  // Artifacts live ONLY on the review board — sweep any that leaked into a
+  // user board before the inbox was board-gated (in-memory strip before render;
+  // the corrected content persists via the normal autosave, not here).
+  const active = reg.boards.find((b) => b.id === reg.activeBoardId);
+  const clean =
+    active?.kind === 'review' ? content : stripArtifactContent(content.nodes, content.edges);
   withoutHistory(() => {
-    useWorkflowStore.getState().setNodes(content.nodes);
-    useWorkflowStore.getState().setEdges(content.edges);
+    useWorkflowStore.getState().setNodes(clean.nodes);
+    useWorkflowStore.getState().setEdges(clean.edges);
   });
   return { boardLoaded: true };
 }

@@ -34,6 +34,25 @@ export interface BoardMeta {
 
 export const REVIEW_BOARD_NAME = 'Design Review';
 
+/**
+ * Spec: artifact nodes live ONLY on the review board. Strips `artifact` nodes
+ * (and any edges touching them) from content headed for a user board — the
+ * one-time cleanup for artifacts that leaked into user boards before the
+ * inbox was board-gated (Task 3 carry-over). Returns the inputs unchanged
+ * when there is nothing to strip.
+ */
+export function stripArtifactContent(
+  nodes: Node<SOVERNNodeData>[],
+  edges: Edge[],
+): { nodes: Node<SOVERNNodeData>[]; edges: Edge[] } {
+  const doomed = new Set(nodes.filter((n) => (n.type as string) === 'artifact').map((n) => n.id));
+  if (doomed.size === 0) return { nodes, edges };
+  return {
+    nodes: nodes.filter((n) => !doomed.has(n.id)),
+    edges: edges.filter((e) => !doomed.has(e.source) && !doomed.has(e.target)),
+  };
+}
+
 interface WorkflowState {
   nodes: Node<SOVERNNodeData>[];
   edges: Edge[];
@@ -357,10 +376,17 @@ export const useWorkflowStore = create<WorkflowState>()(
     // 1. IMMEDIATE save of the outgoing board (direct, not the debounced autosave).
     if (activeBoardId) await saveBoardContent(activeBoardId, nodes, edges);
     // 2. Load the target; missing/corrupt content → empty board, no crash.
+    //    User boards are swept of stray artifact nodes BEFORE render (spec:
+    //    artifacts live only on the review board); autosave persists the fix.
     const content = await loadBoardContent(id);
+    const target = boards.find((b) => b.id === id);
+    const clean =
+      target?.kind === 'review'
+        ? { nodes: content?.nodes ?? [], edges: content?.edges ?? [] }
+        : stripArtifactContent(content?.nodes ?? [], content?.edges ?? []);
     withoutHistory(() => {
-      get().setNodes(content?.nodes ?? []);
-      get().setEdges(content?.edges ?? []);
+      get().setNodes(clean.nodes);
+      get().setEdges(clean.edges);
     });
     // 3. Leave edit mode: pauses temporal tracking + clears undo history,
     //    so undo/redo never leaks across boards.
@@ -396,9 +422,13 @@ export const useWorkflowStore = create<WorkflowState>()(
       // The deleted board was active — fall back to the first remaining user board.
       const fallback = remaining.find((b) => b.kind === 'user') ?? remaining[0];
       const content = await loadBoardContent(fallback.id);
+      const clean =
+        fallback.kind === 'review'
+          ? { nodes: content?.nodes ?? [], edges: content?.edges ?? [] }
+          : stripArtifactContent(content?.nodes ?? [], content?.edges ?? []);
       withoutHistory(() => {
-        get().setNodes(content?.nodes ?? []);
-        get().setEdges(content?.edges ?? []);
+        get().setNodes(clean.nodes);
+        get().setEdges(clean.edges);
       });
       get().exitEditMode();
       set({ selectedNodeId: null });
