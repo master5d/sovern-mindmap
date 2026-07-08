@@ -100,7 +100,12 @@ const serveArtifacts = (): Plugin => ({
         }
         res.setHeader('Content-Type', 'application/json');
         res.setHeader('Cache-Control', 'no-store');
-        res.end(JSON.stringify({ artifacts: readArtifacts() }));
+        try {
+          res.end(JSON.stringify({ artifacts: readArtifacts() }));
+        } catch (e: any) {
+          res.statusCode = 500;
+          res.end(JSON.stringify({ ok: false, error: String(e) }));
+        }
         return;
       }
 
