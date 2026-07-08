@@ -80,3 +80,63 @@ describe('canvasConverter mm:shape', () => {
     expect(nodes[0].data.note).toBeUndefined();
   });
 });
+
+describe('canvasConverter mm:artifact', () => {
+  const artifactNode = (): Node<SOVERNNodeData> => ({
+    id: 'a1', type: 'artifact', position: { x: 5, y: 15 },
+    data: {
+      artifactId: 'a1',
+      code: 'ART-001',
+      name: 'Login screen',
+      variantGroup: 'auth',
+      status: 'approved',
+      projectDir: '/tmp/project',
+    } as unknown as SOVERNNodeData,
+  });
+
+  it('toJSONCanvas writes artifact fields into metadata["mm:artifact"]', () => {
+    const c = toJSONCanvas([artifactNode()], []);
+    expect(c.nodes[0].text).toBe('Login screen');
+    expect(c.nodes[0].metadata?.['mm:artifact']).toEqual({
+      artifactId: 'a1',
+      code: 'ART-001',
+      name: 'Login screen',
+      variantGroup: 'auth',
+      status: 'approved',
+      projectDir: '/tmp/project',
+    });
+  });
+
+  it('round-trips an artifact node (artifactId, code, status, variantGroup)', () => {
+    const c = toJSONCanvas([artifactNode()], []);
+    const { nodes } = fromJSONCanvas(c);
+    expect(nodes[0].type).toBe('artifact');
+    expect(nodes[0].data.artifactId).toBe('a1');
+    expect(nodes[0].data.code).toBe('ART-001');
+    expect(nodes[0].data.status).toBe('approved');
+    expect(nodes[0].data.variantGroup).toBe('auth');
+  });
+
+  it('fromJSONCanvas defaults status to "pending" when absent', () => {
+    const canvas: JSONCanvas = {
+      nodes: [{
+        id: 'a2', type: 'text', x: 0, y: 0, width: 150, height: 60, text: 'Draft',
+        metadata: { 'mm:artifact': { artifactId: 'a2', code: 'ART-002' } },
+      }],
+      edges: [],
+    };
+    const { nodes } = fromJSONCanvas(canvas);
+    expect(nodes[0].type).toBe('artifact');
+    expect(nodes[0].data.status).toBe('pending');
+  });
+
+  it('does not affect non-artifact nodes (backward compatible)', () => {
+    const canvas: JSONCanvas = {
+      nodes: [{ id: 'n1', type: 'text', x: 0, y: 0, width: 150, height: 60, text: 'Task', metadata: { 'sovern:layer': 'coding' } }],
+      edges: [],
+    };
+    const { nodes } = fromJSONCanvas(canvas);
+    expect(nodes[0].type).toBe('sovern');
+    expect(nodes[0].data.layer).toBe('coding');
+  });
+});
