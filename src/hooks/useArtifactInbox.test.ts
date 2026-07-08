@@ -19,6 +19,11 @@ describe('ingestArtifacts', () => {
     expect(useWorkflowStore.getState().nodes.filter(n => (n.data as any).artifactId === 'a1')).toHaveLength(1);
   });
 
+  it('dedupes duplicate ids within a single batch', () => {
+    ingestArtifacts([entry('dup'), entry('dup')]);
+    expect(useWorkflowStore.getState().nodes.filter(n => (n.data as any).artifactId === 'dup')).toHaveLength(1);
+  });
+
   it('lays out variant group in a row', () => {
     ingestArtifacts([entry('v1', 'g'), entry('v2', 'g'), entry('v3', 'g')]);
     const xs = useWorkflowStore.getState().nodes.filter(n => (n.data as any).variantGroup === 'g').map(n => n.position.x);

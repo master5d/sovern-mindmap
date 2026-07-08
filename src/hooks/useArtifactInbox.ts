@@ -38,10 +38,16 @@ function groupBand(group: string): number {
 export function ingestArtifacts(entries: ArtifactEntry[]): void {
   if (entries.length === 0) return;
   const { nodes, setNodes } = useWorkflowStore.getState();
-  const existingIds = new Set(
+  // Seeded with store-resident ids, then grown as entries are accepted — so a
+  // duplicate id WITHIN one batch is dropped too (not just cross-poll repeats).
+  const seenIds = new Set(
     nodes.map((n) => (n.data as any)?.artifactId).filter((id): id is string => typeof id === 'string'),
   );
-  const fresh = entries.filter((e) => !existingIds.has(e.id));
+  const fresh = entries.filter((e) => {
+    if (seenIds.has(e.id)) return false;
+    seenIds.add(e.id);
+    return true;
+  });
   if (fresh.length === 0) return;
 
   // Count existing nodes per bucket so new nodes append after them rather than overlap.
