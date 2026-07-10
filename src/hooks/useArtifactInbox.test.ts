@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { useWorkflowStore } from '../store/useWorkflowStore';
 import type { BoardMeta } from '../store/useWorkflowStore';
 import { ingestArtifacts, processArtifactPoll, repairArtifactOverlaps } from './useArtifactInbox';
-import { artifactTombstonePayloads } from './artifactTombstones';
+import { artifactTombstonePayloads, postArtifactTombstones, _resetTombstonedIdsForTests } from './artifactTombstones';
 
 const entry = (id: string, g?: string) => ({ id, ts: '2026-07-07', code: 'const App=()=>null;', name: id, variant_group: g });
 const decidedEntry = (id: string, decision: 'approved' | 'rejected', exportedTo?: string) => ({
@@ -287,6 +287,34 @@ describe('deletion tombstones', () => {
       body: JSON.stringify({ artifactId: 'a1', decision: 'deleted', name: 'V1', variant_group: 'g1' }),
     }));
     expect(useWorkflowStore.getState().nodes.find((n) => n.id === 'artifact-a1')).toBeUndefined();
+
+    vi.unstubAllGlobals();
+  });
+});
+
+// ── Task 4: session tombstone memory closes the 2s-poll resurrection race ──
+
+describe('session tombstone memory', () => {
+  beforeEach(() => {
+    useWorkflowStore.getState().setNodes([]);
+    _resetTombstonedIdsForTests();
+  });
+
+  afterEach(() => {
+    _resetTombstonedIdsForTests();
+  });
+
+  it('a poll tick in flight before the tombstone write cannot resurrect the deleted artifact', () => {
+    const fetchMock = vi.fn(async () => ({ ok: true } as any));
+    vi.stubGlobal('fetch', fetchMock);
+
+    postArtifactTombstones([{ artifactId: 'a1', decision: 'deleted' }]);
+
+    ingestArtifacts([entry('a1'), entry('a2')]);
+
+    const nodes = useWorkflowStore.getState().nodes;
+    expect(nodes.find((n) => (n.data as any).artifactId === 'a1')).toBeUndefined();
+    expect(nodes.find((n) => (n.data as any).artifactId === 'a2')).toBeDefined();
 
     vi.unstubAllGlobals();
   });

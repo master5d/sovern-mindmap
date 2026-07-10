@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { Node } from '@xyflow/react';
 import { useWorkflowStore, withoutHistory, stripArtifactContent } from '../store/useWorkflowStore';
 import { ArtifactNodeData, SOVERNNodeData } from '../types';
+import { isTombstoned } from './artifactTombstones';
 
 /** Wire shape from GET /api/artifacts (snake_case, matches src/mcp/artifactInbox.ts).
  * `decision`/`exportedTo` are server-merged from the decisions ledger (Fix 1: an
@@ -42,6 +43,11 @@ function maxArtifactY(nodes: Node[]): number | null {
  * background sync, not a hand-edit).
  */
 export function ingestArtifacts(entries: ArtifactEntry[]): void {
+  if (entries.length === 0) return;
+  // A tick whose fetch was already in flight when a tombstone POST fired can
+  // still carry a just-deleted artifact — reject those BEFORE the seenIds
+  // dedupe below (Task 4: closes the 2s-poll resurrection race client-side).
+  entries = entries.filter((e) => !isTombstoned(e.id));
   if (entries.length === 0) return;
   const { nodes, setNodes } = useWorkflowStore.getState();
   // Seeded with store-resident ids, then grown as entries are accepted — so a

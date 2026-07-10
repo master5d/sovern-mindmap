@@ -31,10 +31,31 @@ export function artifactTombstonePayloads(
     }));
 }
 
+// Session tombstone memory (Task 4): the server-side ledger closes the gap on
+// the NEXT poll, but a tick whose GET /api/artifacts was already in flight
+// when the tombstone POST fires still carries the artifact — ingestArtifacts
+// only adds, so that one lost race is a PERMANENT resurrection. Belt to the
+// server filter's suspenders: remember tombstoned ids client-side, in the
+// same tick that fires the POST, so ingest can reject them regardless of
+// which stale response lands.
+const tombstonedIds = new Set<string>();
+
+export function isTombstoned(id: string): boolean {
+  return tombstonedIds.has(id);
+}
+
+/** Test-only: clear session tombstone memory between test cases. */
+export function _resetTombstonedIdsForTests(): void {
+  tombstonedIds.clear();
+}
+
 /** Fire-and-forget: ledger tombstones for deleted artifact nodes. Silent on
- * failure (same style as the poll) — the node just resurrects on a later poll. */
+ * failure (same style as the poll) — the node just resurrects on a later poll.
+ * Each id is remembered BEFORE the fetch fires (synchronously), so the race
+ * window closes at call time, not at response time. */
 export function postArtifactTombstones(payloads: TombstonePayload[]): void {
   payloads.forEach((p) => {
+    tombstonedIds.add(p.artifactId);
     fetch('/api/artifacts/decision', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
