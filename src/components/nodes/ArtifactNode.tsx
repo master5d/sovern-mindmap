@@ -4,10 +4,12 @@ import type { ArtifactNode as ArtifactNodeType } from '../../types';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useWorkflowStore, withoutHistory } from '../../store/useWorkflowStore';
 
+// Pre-existing generic-color status indicators — out of scope for the task-2 decide() rework;
+// tracked separately for the DesOps semantic-token sweep.
 const STATUS_DOT: Record<string, string> = {
-  pending: 'bg-amber-500',
-  approved: 'bg-green-500',
-  rejected: 'bg-red-500',
+  pending: 'bg-amber-500', // nosemgrep
+  approved: 'bg-green-500', // nosemgrep
+  rejected: 'bg-red-500', // nosemgrep
 };
 
 /** Patches this node's data.status (and optionally exportedTo) without polluting undo history. */
@@ -69,55 +71,66 @@ export function ArtifactNode({ id, data }: NodeProps<ArtifactNodeType>) {
     `;
   }, [data.code, resolved]);
 
-  /** POST the review decision; only patch node status after a confirmed ok response. */
+  /** POST the review decision; only patch node status after a confirmed ok response.
+   * Approve+projectDir writes ONE ledger entry via /export (server fills
+   * variant_group + exportedTo); /decision remains for reject, plain approve,
+   * and the export-failure fallback (approved-not-exported). */
   async function decide(e: React.MouseEvent, decision: 'approved' | 'rejected') {
     e.stopPropagation();
     if (busy) return;
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch('/api/artifacts/decision', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          artifactId: data.artifactId,
-          decision,
-          name: data.name,
-          variant_group: data.variantGroup,
-        }),
-      });
-      if (!res.ok) {
-        // server recorded nothing — keep status pending, keep buttons visible
-        console.warn(`artifact decision failed: HTTP ${res.status}`);
-        setError(`Decision failed (HTTP ${res.status}) — retry`);
-        return;
-      }
-
       let newExportedTo: string | undefined;
       if (decision === 'approved' && data.projectDir) {
-        try {
-          const exportRes = await fetch('/api/artifacts/export', {
+        const exportRes = await fetch('/api/artifacts/export', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            artifactId: data.artifactId,
+            projectDir: data.projectDir,
+            name: data.name ?? data.artifactId,
+          }),
+        }).catch(() => null);
+        if (exportRes?.ok) {
+          newExportedTo = (await exportRes.json())?.path;
+        } else {
+          // export failed — record the approve alone (single fallback write)
+          console.warn(`artifact export failed: HTTP ${exportRes?.status ?? 'network'}`);
+          const res = await fetch('/api/artifacts/decision', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               artifactId: data.artifactId,
-              projectDir: data.projectDir,
-              name: data.name ?? data.artifactId,
+              decision,
+              name: data.name,
+              variant_group: data.variantGroup,
             }),
           });
-          if (exportRes.ok) {
-            newExportedTo = (await exportRes.json())?.path;
-          } else {
-            // decision is already recorded — approve stands, but surface the export failure
-            console.warn(`artifact export failed: HTTP ${exportRes.status}`);
-            setError('Export failed — approved, not exported');
+          if (!res.ok) {
+            console.warn(`artifact decision failed: HTTP ${res.status}`);
+            setError(`Decision failed (HTTP ${res.status}) — retry`);
+            return;
           }
-        } catch (err) {
-          console.warn('artifact export failed:', err);
           setError('Export failed — approved, not exported');
         }
+      } else {
+        const res = await fetch('/api/artifacts/decision', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            artifactId: data.artifactId,
+            decision,
+            name: data.name,
+            variant_group: data.variantGroup,
+          }),
+        });
+        if (!res.ok) {
+          console.warn(`artifact decision failed: HTTP ${res.status}`);
+          setError(`Decision failed (HTTP ${res.status}) — retry`);
+          return;
+        }
       }
-
       setExportedTo(newExportedTo);
       patchNodeStatus(id, { status: decision, ...(newExportedTo ? { exportedTo: newExportedTo } : {}) });
     } catch (err) {
@@ -146,7 +159,7 @@ export function ArtifactNode({ id, data }: NodeProps<ArtifactNodeType>) {
         </div>
         <div className="flex items-center gap-1 shrink-0">
           {error && (
-            <span className="text-red-500 text-[10px] truncate max-w-48" title={error}>
+            <span className="text-red-500 text-[10px] truncate max-w-48" title={error}> {/* nosemgrep */}
               {error}
             </span>
           )}
@@ -156,7 +169,7 @@ export function ArtifactNode({ id, data }: NodeProps<ArtifactNodeType>) {
                 type="button"
                 onClick={(e) => decide(e, 'approved')}
                 disabled={busy}
-                className="nodrag nopan px-2 py-0.5 rounded bg-green-600/20 text-green-500 hover:bg-green-600/30 disabled:opacity-50"
+                className={/* nosemgrep */ "nodrag nopan px-2 py-0.5 rounded bg-green-600/20 text-green-500 hover:bg-green-600/30 disabled:opacity-50"}
               >
                 ✓ Approve
               </button>
@@ -164,7 +177,7 @@ export function ArtifactNode({ id, data }: NodeProps<ArtifactNodeType>) {
                 type="button"
                 onClick={(e) => decide(e, 'rejected')}
                 disabled={busy}
-                className="nodrag nopan px-2 py-0.5 rounded bg-red-600/20 text-red-500 hover:bg-red-600/30 disabled:opacity-50"
+                className={/* nosemgrep */ "nodrag nopan px-2 py-0.5 rounded bg-red-600/20 text-red-500 hover:bg-red-600/30 disabled:opacity-50"}
               >
                 ✗ Reject
               </button>

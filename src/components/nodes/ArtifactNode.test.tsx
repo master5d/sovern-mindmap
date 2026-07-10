@@ -183,4 +183,72 @@ describe('ArtifactNode', () => {
     warnSpy.mockRestore();
     cleanup();
   });
+
+  it('approve with projectDir calls ONLY /export (single ledger write)', async () => {
+    const calls: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      calls.push(String(url));
+      return { ok: true, json: async () => ({ ok: true, path: 'C:/telo/p/design/drafts/v.tsx' }) } as any;
+    }));
+
+    const { container, cleanup } = mount(
+      <ArtifactNode {...makeProps({ status: 'pending', projectDir: 'C:/telo/p' } as any)} />,
+    );
+    const approveButton = findButton(container, /approve/i);
+
+    await act(async () => {
+      approveButton.click();
+      await Promise.resolve();
+    });
+
+    expect(calls).toEqual(['/api/artifacts/export']);
+    expect(storeStatus()).toBe('approved');
+
+    cleanup();
+  });
+
+  it('approve with projectDir falls back to /decision when export fails', async () => {
+    const calls: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      calls.push(String(url));
+      if (String(url).endsWith('/export')) return { ok: false, status: 500 } as any;
+      return { ok: true, json: async () => ({ ok: true }) } as any;
+    }));
+
+    const { container, cleanup } = mount(
+      <ArtifactNode {...makeProps({ status: 'pending', projectDir: 'C:/telo/p' } as any)} />,
+    );
+    const approveButton = findButton(container, /approve/i);
+
+    await act(async () => {
+      approveButton.click();
+      await Promise.resolve();
+    });
+
+    expect(calls).toEqual(['/api/artifacts/export', '/api/artifacts/decision']);
+    expect(storeStatus()).toBe('approved');
+
+    cleanup();
+  });
+
+  it('approve WITHOUT projectDir posts /decision only (unchanged)', async () => {
+    const calls: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      calls.push(String(url));
+      return { ok: true, json: async () => ({ ok: true }) } as any;
+    }));
+
+    const { container, cleanup } = mount(<ArtifactNode {...makeProps({ status: 'pending' })} />);
+    const approveButton = findButton(container, /approve/i);
+
+    await act(async () => {
+      approveButton.click();
+      await Promise.resolve();
+    });
+
+    expect(calls).toEqual(['/api/artifacts/decision']);
+    expect(storeStatus()).toBe('approved');
+
+    cleanup();
+  });
 });
