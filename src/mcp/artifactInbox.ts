@@ -19,7 +19,7 @@ export interface DecisionEntry {
   id: string;
   ts: string;
   artifactId: string;
-  decision: 'approved' | 'rejected';
+  decision: 'approved' | 'rejected' | 'deleted';
   name?: string;
   variant_group?: string;
   exportedTo?: string;
@@ -95,6 +95,7 @@ export interface ArtifactWithDecision extends ArtifactEntry {
  * latest decision for an id repeats the same verdict but drops exportedTo
  * (e.g. a plain approve followed by re-reading, or reordered writes), the
  * earlier exportedTo is preserved rather than lost.
+ * Artifacts whose latest decision is 'deleted' (tombstones) are excluded entirely.
  */
 export function readArtifactsWithDecisions(): ArtifactWithDecision[] {
   const decisions = readDecisions();
@@ -107,9 +108,12 @@ export function readArtifactsWithDecisions(): ArtifactWithDecision[] {
       latestByArtifactId.set(d.artifactId, d);
     }
   }
-  return readArtifacts().map((a) => {
+  const out: ArtifactWithDecision[] = [];
+  for (const a of readArtifacts()) {
     const decision = latestByArtifactId.get(a.id);
-    if (!decision) return a;
-    return { ...a, decision: decision.decision, exportedTo: decision.exportedTo };
-  });
+    if (decision?.decision === 'deleted') continue; // tombstoned — never reaches the feed
+    if (!decision) out.push(a);
+    else out.push({ ...a, decision: decision.decision as 'approved' | 'rejected', exportedTo: decision.exportedTo });
+  }
+  return out;
 }

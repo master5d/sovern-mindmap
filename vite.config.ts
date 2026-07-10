@@ -67,7 +67,7 @@ const serveBoard = (): Plugin => ({
 });
 
 const TOKENS_CSS_PATH = 'C:/telo/Efforts/Ongoing/NAUTILUS/core/desops/ui-kit/globals.css';
-const DECISIONS = ['approved', 'rejected'];
+const DECISIONS = ['approved', 'rejected', 'deleted'];
 
 /** kebab-нормализация имени файла: lower-case, non-alnum -> '-', trim dashes. */
 function kebab(name: string): string {
@@ -203,6 +203,7 @@ const serveArtifacts = (): Plugin => ({
               artifactId,
               decision: 'approved',
               name,
+              variant_group: artifact.variant_group,
               exportedTo: finalPath,
             });
 

@@ -63,4 +63,32 @@ describe('artifactInbox', () => {
     const rows = readArtifactsWithDecisions();
     expect(rows[0].decision).toBe('approved');
   });
+
+  it('tombstone: latest deleted hides the artifact from the feed', async () => {
+    const { appendArtifact, appendDecision, readArtifactsWithDecisions } = await import('./artifactInbox');
+    const a = appendArtifact({ code: 'const App=()=>null;', name: 'Doomed', variant_group: 'g1' });
+    const b = appendArtifact({ code: 'const App=()=>null;', name: 'Alive' });
+    appendDecision({ artifactId: a.id, decision: 'deleted', variant_group: 'g1' });
+    const rows = readArtifactsWithDecisions();
+    expect(rows).toHaveLength(1);
+    expect(rows[0].id).toBe(b.id);
+  });
+
+  it('tombstone: approved AFTER deleted resurrects (latest-wins)', async () => {
+    const { appendArtifact, appendDecision, readArtifactsWithDecisions } = await import('./artifactInbox');
+    const a = appendArtifact({ code: 'const App=()=>null;', name: 'Undone' });
+    appendDecision({ artifactId: a.id, decision: 'deleted' });
+    appendDecision({ artifactId: a.id, decision: 'approved' });
+    const rows = readArtifactsWithDecisions();
+    expect(rows).toHaveLength(1);
+    expect(rows[0].decision).toBe('approved');
+  });
+
+  it('tombstone: deleted AFTER approved hides despite earlier exportedTo', async () => {
+    const { appendArtifact, appendDecision, readArtifactsWithDecisions } = await import('./artifactInbox');
+    const a = appendArtifact({ code: 'const App=()=>null;', name: 'Exported' });
+    appendDecision({ artifactId: a.id, decision: 'approved', exportedTo: 'C:/telo/x/design/drafts/v.tsx' });
+    appendDecision({ artifactId: a.id, decision: 'deleted' });
+    expect(readArtifactsWithDecisions()).toHaveLength(0);
+  });
 });
