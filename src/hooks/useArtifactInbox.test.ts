@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useWorkflowStore } from '../store/useWorkflowStore';
 import type { BoardMeta } from '../store/useWorkflowStore';
 import { ingestArtifacts, processArtifactPoll, repairArtifactOverlaps } from './useArtifactInbox';
+import { artifactTombstonePayloads } from './artifactTombstones';
 
 const entry = (id: string, g?: string) => ({ id, ts: '2026-07-07', code: 'const App=()=>null;', name: id, variant_group: g });
 const decidedEntry = (id: string, decision: 'approved' | 'rejected', exportedTo?: string) => ({
@@ -222,5 +223,71 @@ describe('processArtifactPoll', () => {
     processArtifactPoll([]);
 
     expect(useWorkflowStore.getState().nodes.filter((n) => n.type === 'artifact')).toHaveLength(1);
+  });
+});
+
+// ── Task 3: deletion tombstones ──────────────────────────────────────────
+
+describe('deletion tombstones', () => {
+  const reviewBoardMeta: BoardMeta = { id: 'board-review', name: 'Design Review', kind: 'review' };
+
+  const seedReviewBoard = () => {
+    useWorkflowStore.getState().initBoards({ boards: [reviewBoardMeta], activeBoardId: reviewBoardMeta.id });
+    useWorkflowStore.getState().setNodes([
+      {
+        id: 'artifact-a1',
+        type: 'artifact',
+        position: { x: 0, y: 0 },
+        data: { artifactId: 'a1', code: 'const X=()=>null;', status: 'pending', name: 'V1', variantGroup: 'g1' },
+      },
+      {
+        id: 'n2',
+        type: 'sovern',
+        position: { x: 0, y: 0 },
+        data: { label: 'n2', layer: 'projects', status: 'pending' },
+      },
+    ] as any);
+  };
+
+  beforeEach(() => {
+    useWorkflowStore.setState({ nodes: [], edges: [], selectedNodeId: null, isEditing: false, boards: [], activeBoardId: '' });
+    useWorkflowStore.temporal.getState().clear();
+    useWorkflowStore.temporal.getState().pause();
+  });
+
+  it('artifactTombstonePayloads: remove-changes on review board yield payloads for artifact nodes only', () => {
+    seedReviewBoard();
+    const changes = [
+      { type: 'remove', id: 'artifact-a1' },
+      { type: 'remove', id: 'n2' },
+    ] as any[];
+    const payloads = artifactTombstonePayloads(useWorkflowStore.getState().nodes, changes);
+    expect(payloads).toEqual([
+      { artifactId: 'a1', decision: 'deleted', name: 'V1', variant_group: 'g1' },
+    ]);
+  });
+
+  it('artifactTombstonePayloads: empty on non-remove changes', () => {
+    seedReviewBoard();
+    const nodes = useWorkflowStore.getState().nodes;
+    expect(artifactTombstonePayloads(nodes, [{ type: 'select', id: 'artifact-a1', selected: true } as any])).toEqual([]);
+  });
+
+  it('onNodesChange remove of an artifact node posts a tombstone (review board active) and still deletes the node', async () => {
+    seedReviewBoard();
+    const fetchMock = vi.fn(async () => ({ ok: true } as any));
+    vi.stubGlobal('fetch', fetchMock);
+
+    useWorkflowStore.getState().onNodesChange([{ type: 'remove', id: 'artifact-a1' } as any]);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/artifacts/decision', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ artifactId: 'a1', decision: 'deleted', name: 'V1', variant_group: 'g1' }),
+    }));
+    expect(useWorkflowStore.getState().nodes.find((n) => n.id === 'artifact-a1')).toBeUndefined();
+
+    vi.unstubAllGlobals();
   });
 });

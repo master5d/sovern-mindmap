@@ -21,6 +21,7 @@ import {
   deleteBoardContent,
   saveBoardsRegistry,
 } from '../utils/persistence';
+import { artifactTombstonePayloads, postArtifactTombstones } from '../hooks/artifactTombstones';
 
 export type ViewMode = 'mindmap' | 'diagram' | 'matrix' | 'timeline' | 'kanban' | 'outline';
 export type DiagramLayout = 'tree' | 'lanes';
@@ -182,6 +183,14 @@ export const useWorkflowStore = create<WorkflowState>()(
     if (nextSelectedId !== get().selectedNodeId) set({ selectedNodeId: nextSelectedId });
     // A real user drag is a structural edit — freeze the live poll so it isn't clobbered.
     if (changes.some((c) => c.type === 'position' && (c as any).dragging)) get().enterEditMode();
+    // Ledger tombstones: deleting an artifact node on the review board is a
+    // user decision — record it server-side so the poll doesn't resurrect it.
+    if (changes.some((c) => c.type === 'remove')) {
+      const { boards, activeBoardId } = get();
+      if (boards.find((b) => b.id === activeBoardId)?.kind === 'review') {
+        postArtifactTombstones(artifactTombstonePayloads(get().nodes, changes as any));
+      }
+    }
     // React Flow's incremental node changes (selection, dimension measurement, per-frame
     // drag positions) must not pollute undo history — only structural authoring actions
     // (add/delete/rename/paste/fold) are undoable.
@@ -267,6 +276,15 @@ export const useWorkflowStore = create<WorkflowState>()(
   deleteNodeCascade: (nodeId) => {
     get().enterEditMode();
     const doomed = new Set([nodeId, ...getDescendants(nodeId, get().edges)]);
+    // Ledger tombstones: this cascade bypasses onNodesChange (React Flow's
+    // Delete key + selection go straight through here), so an artifact node
+    // selected on the review board must be tombstoned the same way.
+    const { boards, activeBoardId, nodes } = get();
+    if (boards.find((b) => b.id === activeBoardId)?.kind === 'review') {
+      postArtifactTombstones(
+        artifactTombstonePayloads(nodes, [...doomed].map((id) => ({ type: 'remove', id }))),
+      );
+    }
     set({
       nodes: get().nodes.filter((n) => !doomed.has(n.id)),
       edges: get().edges.filter((e) => !doomed.has(e.source) && !doomed.has(e.target)),
