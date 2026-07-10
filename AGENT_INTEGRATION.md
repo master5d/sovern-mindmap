@@ -31,7 +31,7 @@ npm run build:mcp          # обязательный шаг на свежем �
 | Tool | Параметры | Что делает |
 |---|---|---|
 | `create_artifact_node` | `code` (обяз., React-код с корневым `App`), `name`, `variant_group`, `project_dir` | Кладёт артефакт в inbox → через ≤2s появляется нодой на живом canvas. Вариации одной `variant_group` ложатся в ряд (галерея). `project_dir` включает экспорт approved-кода в `<project>\design\drafts\` |
-| `read_artifact_decisions` | `variant_group?` | Возвращает вердикты человека (approved/rejected + exportedTo) — замыкание петли review |
+| `read_artifact_decisions` | `variant_group?` | Возвращает вердикты человека (approved/rejected/**deleted** + exportedTo) — замыкание петли review. `deleted` = owner снёс ноду с борда (tombstone): не перегенерируйте тот же вариант вслепую |
 | `read_graph` | — | Вся карта в JSON Canvas |
 | `create_node` | `label`, `layer`, `parent_id?`, `status?`, `budget?` | Обычная SOVERN-нода (⚠️ пишет во внутренний граф MCP-процесса, НЕ на живой canvas — мост построен только для артефактов) |
 | `update_node`, `calculate_budget_rollup` | см. схемы | Как create_node — внутренний граф |
@@ -42,8 +42,12 @@ npm run build:mcp          # обязательный шаг на свежем �
 агент → MCP create_artifact_node → .sovern/artifact-inbox.jsonl (append-only JSONL)
    живой canvas (vite :1420) ── GET /api/artifacts (poll 2s, мержит decisions) → нода ArtifactNode
    человек: ✓ Approve / ✗ Reject на ноде → .sovern/artifact-decisions.jsonl (+export файла при projectDir)
+   человек: Delete ноды на review-борде → tombstone decision:'deleted' → артефакт исчезает из фида НАВСЕГДА
    агент → read_artifact_decisions → видит вердикт и exportedTo
 ```
+
+- **Одна запись на approve+export (2026-07-10):** approve артефакта с `project_dir` пишет РОВНО одну ledger-строку через `/export` — `approved` + `variant_group` + `exportedTo` вместе (раньше было две записи, и group-фильтрованный `read_artifact_decisions` не видел exportedTo).
+- **Tombstones (2026-07-10):** удалённый с review-борда артефакт получает вердикт `deleted` и фильтруется из `GET /api/artifacts` — не воскресает ни на поллах, ни на свежем канвасе. Повторный `create_artifact_node` с новым кодом = новый id, живёт нормально.
 
 - Canvas должен быть запущен: `npm run dev` (порт **1420 strictPort**). Без него артефакты копятся в inbox и появятся при следующем старте — уже со статусами из decisions-ledger.
 - **Вкладки (2026-07-08):** канвас мульти-бордовый; артефакты материализуются ТОЛЬКО на служебной вкладке **«Design Review»** (создаётся сама; на других вкладках — только pending-бейдж). Artifact-ноды, попавшие в user-борды, автоматически вычищаются (sweep). Агенту ничего менять не нужно — мост тот же.

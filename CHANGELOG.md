@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.0.0-alpha.13] - 2026-07-10
+
+### 🛠 Fixed — artifact tombstones + single decision-write (DesOps canvas layer)
+- **Deleted artifact nodes stay deleted.** Removing an artifact node on the Design Review board (Delete key or React Flow removal) now writes a `decision:'deleted'` tombstone to the ledger; the server filters latest-deleted artifacts out of `GET /api/artifacts`, so the 2s poll no longer resurrects them — on this canvas or any fresh one. Both deletion paths are covered (`onNodesChange` remove and `deleteNodeCascade`, which the Delete key actually uses). A session-side tombstone set closes the fire-and-forget-POST vs poll race that the live smoke caught (an in-flight fetch could re-ingest the node permanently).
+- **Approve+Export writes exactly one ledger entry.** Approving an artifact with `project_dir` now calls only `/export`, which records `approved` + `variant_group` + `exportedTo` in a single row (previously two rows, the second missing `variant_group`, so group-filtered `read_artifact_decisions` never saw `exportedTo`). Plain `/decision` remains for reject, approve-without-projectDir, and the export-failure fallback («approved, not exported»).
+
+### 🧪 Tests
+- Full suite **256** green; live smoke: browser delete → tombstone row + feed filtered + no resurrection; HTTP `/export` → exactly one complete ledger line.
+
 ## [v1.0.0-alpha.12] - 2026-06-24
 
 ### 🚀 Added — Reading Mode / neuro-inclusive preset (slice 14)
