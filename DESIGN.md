@@ -6,6 +6,12 @@ generators (AI via LiteLLM, draw.io, archify, pencil) are invisible backends.
 ## Tokens
 Theme tokens live in `src/theme/tokens.css` (dark/light) + design-token upload.
 
+## Identity contract (machine-readable)
+`design/identity.json` — descriptor + dials (variance 3 / motion 4 / density 6) +
+palette. Канон значений палитры — `src/theme/tokens.css` (identity.json — их
+машиночитаемая копия для DesOps-читателей: ночной аудит, /design-audit,
+desops-architect).
+
 ## Diagrams
 Exported diagrams live in `design/diagrams/` (DesOps Standard).
 AI↔canvas interchange is JSON Canvas (Obsidian spec) — never Mermaid.

@@ -1,0 +1,9 @@
+{
+  "descriptor": "unified dark diagramming canvas, deep navy surfaces + electric blue accent, single React Flow surface",
+  "dials": { "variance": 3, "motion": 4, "density": 6 },
+  "palette": {
+    "dark": { "bg": "#020617", "accent": "#2563eb", "surface": "#0f172a" },
+    "light": { "bg": "#f8fafc", "accent": "#2563eb" }
+  },
+  "rationale": "Канвас: умеренная плотность (диаграммы должны дышать), интеракции живые (drag/fold/step-through) но не постановочные. Канон значений — src/theme/tokens.css."
+}
