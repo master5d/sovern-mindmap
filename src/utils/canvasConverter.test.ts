@@ -42,6 +42,43 @@ describe('canvasConverter mm:shape', () => {
     expect(nodes[0].data.shape).toBe('decision');
   });
 
+  it('round-trips геометрию: позиция и размер переживают оба конца', () => {
+    // Числа намеренно РАЗНЫЕ и ненулевые. Остальные roundtrip-тесты сидят
+    // на {x:0,y:0}: с такими координатами потеря позиции, перепутанные оси
+    // и дефолт-подстановка неотличимы от корректной работы — тест зелёный
+    // при сломанном конвертере.
+    const node: Node<SOVERNNodeData> = {
+      id: 'geo', type: 'shape', position: { x: 137, y: 42 },
+      measured: { width: 220, height: 90 },
+      data: { label: 'Geo', layer: 'projects', status: 'idle', shape: 'cylinder' },
+    };
+    const c = toJSONCanvas([node], []);
+    expect([c.nodes[0].x, c.nodes[0].y]).toEqual([137, 42]);
+    expect([c.nodes[0].width, c.nodes[0].height]).toEqual([220, 90]);
+
+    const { nodes } = fromJSONCanvas(c);
+    expect(nodes[0].position).toEqual({ x: 137, y: 42 });
+  });
+
+  it('дробные координаты округляются, а не теряются', () => {
+    const node: Node<SOVERNNodeData> = {
+      id: 'frac', type: 'shape', position: { x: 10.6, y: -3.2 },
+      measured: { width: 150, height: 60 },
+      data: { label: 'F', layer: 'projects', status: 'idle', shape: 'rectangle' },
+    };
+    const c = toJSONCanvas([node], []);
+    expect([c.nodes[0].x, c.nodes[0].y]).toEqual([11, -3]);
+  });
+
+  it('без measured берётся дефолтный размер, а не undefined', () => {
+    const node: Node<SOVERNNodeData> = {
+      id: 'nom', type: 'shape', position: { x: 5, y: 7 },
+      data: { label: 'N', layer: 'projects', status: 'idle', shape: 'rectangle' },
+    };
+    const c = toJSONCanvas([node], []);
+    expect([c.nodes[0].width, c.nodes[0].height]).toEqual([150, 60]);
+  });
+
   it('round-trips an extended shape (cylinder)', () => {
     const node: Node<SOVERNNodeData> = {
       id: 'db', type: 'shape', position: { x: 0, y: 0 },
