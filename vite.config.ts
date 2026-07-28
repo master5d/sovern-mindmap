@@ -6,6 +6,21 @@ import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { dirname, join, resolve, sep } from 'node:path';
 import { readArtifacts, readArtifactsWithDecisions, appendDecision } from './src/mcp/artifactInbox';
+import { BodyTooLargeError, readBodyCapped } from './src/mcp/httpBody';
+
+/** 413 вместо молчаливого проглатывания — общий хвост для всех POST-мостов.
+ *  Порядок важен: сначала ответ, и только потом обрыв недочитанного запроса —
+ *  иначе клиент видит разорванное соединение вместо кода. */
+function sendBodyError(
+  req: { destroy(): void },
+  res: { statusCode: number; setHeader(k: string, v: string): void; end(s: string): void },
+  e: unknown,
+): void {
+  res.statusCode = e instanceof BodyTooLargeError ? 413 : 400;
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify({ ok: false, error: String((e as Error)?.message ?? e) }));
+  req.destroy();
+}
 
 // Путь к board.canvas: env SOVERN_BOARD или дефолт — mc_hub feedback board.
 const BOARD_PATH =
@@ -40,9 +55,7 @@ const serveBoard = (): Plugin => ({
         res.end('POST only');
         return;
       }
-      let body = '';
-      req.on('data', (c) => (body += c));
-      req.on('end', () => {
+      readBodyCapped(req).then((body) => {
         res.setHeader('Content-Type', 'application/json');
         try {
           const { id, status } = JSON.parse(body);
@@ -61,7 +74,7 @@ const serveBoard = (): Plugin => ({
           res.statusCode = 500;
           res.end(JSON.stringify({ ok: false, error: e?.stderr?.toString?.() || String(e) }));
         }
-      });
+      }, (e) => sendBodyError(req, res, e));
     });
   },
 });
@@ -115,9 +128,7 @@ const serveArtifacts = (): Plugin => ({
           res.end('POST only');
           return;
         }
-        let body = '';
-        req.on('data', (c) => (body += c));
-        req.on('end', () => {
+        readBodyCapped(req).then((body) => {
           res.setHeader('Content-Type', 'application/json');
           try {
             const { artifactId, decision, name, variant_group } = JSON.parse(body);
@@ -126,13 +137,22 @@ const serveArtifacts = (): Plugin => ({
               res.end(JSON.stringify({ ok: false, error: 'invalid artifactId or decision' }));
               return;
             }
+            // Решение по несуществующему артефакту — молчаливая порча журнала:
+            // запись ляжет в JSONL и никогда ни к чему не применится (а при
+            // переиспользовании id применится не к тому). /export эту проверку
+            // делал с самого начала — здесь её просто забыли.
+            if (!readArtifacts().some((a) => a.id === artifactId)) {
+              res.statusCode = 404;
+              res.end(JSON.stringify({ ok: false, error: `unknown artifactId: ${artifactId}` }));
+              return;
+            }
             appendDecision({ artifactId, decision, name, variant_group });
             res.end(JSON.stringify({ ok: true }));
           } catch (e: any) {
             res.statusCode = 400;
             res.end(JSON.stringify({ ok: false, error: String(e) }));
           }
-        });
+        }, (e) => sendBodyError(req, res, e));
         return;
       }
 
@@ -142,9 +162,7 @@ const serveArtifacts = (): Plugin => ({
           res.end('POST only');
           return;
         }
-        let body = '';
-        req.on('data', (c) => (body += c));
-        req.on('end', () => {
+        readBodyCapped(req).then((body) => {
           res.setHeader('Content-Type', 'application/json');
           try {
             const { artifactId, projectDir, name } = JSON.parse(body);
@@ -212,7 +230,7 @@ const serveArtifacts = (): Plugin => ({
             res.statusCode = 400;
             res.end(JSON.stringify({ ok: false, error: String(e) }));
           }
-        });
+        }, (e) => sendBodyError(req, res, e));
         return;
       }
 
