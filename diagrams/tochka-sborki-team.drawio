@@ -1,0 +1,319 @@
+<mxfile host="Electron" agent="sovern-mindmap" pages="4">
+  <diagram id="adminstruct" name="Administrative Structure">
+    <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="1280" pageHeight="720" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="a_title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=16;fontStyle=1;fontColor=#0f172a;" value="Synergify Institute for AI × S.A.S.H.A — Administrative &amp; Legal Structure" vertex="1">
+          <mxGeometry height="28" width="900" x="40" y="12" as="geometry" />
+        </mxCell>
+        <mxCell id="catalog" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f3ff;strokeColor=#7c3aed;verticalAlign=top;spacingTop=8;fontSize=11;fontStyle=1;fontColor=#6d28d9;" value="Course Catalog · esoteric / spiritual development" vertex="1">
+          <mxGeometry height="330" width="320" x="810" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="c1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ede9fe;strokeColor=#7c3aed;fontColor=#5b21b6;fontSize=12;" value="Astrology" vertex="1">
+          <mxGeometry height="42" width="280" x="830" y="234" as="geometry" />
+        </mxCell>
+        <mxCell id="c2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ede9fe;strokeColor=#7c3aed;fontColor=#5b21b6;fontSize=12;" value="Shamanism" vertex="1">
+          <mxGeometry height="42" width="280" x="830" y="294" as="geometry" />
+        </mxCell>
+        <mxCell id="c3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ede9fe;strokeColor=#7c3aed;fontColor=#5b21b6;fontSize=12;" value="Energy &amp; Healing work" vertex="1">
+          <mxGeometry height="42" width="280" x="830" y="354" as="geometry" />
+        </mxCell>
+        <mxCell id="c4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f3ff;strokeColor=#a78bfa;fontColor=#6d28d9;fontSize=12;fontStyle=2;dashed=1;" value="… further spiritual-dev courses" vertex="1">
+          <mxGeometry height="42" width="280" x="830" y="414" as="geometry" />
+        </mxCell>
+        <mxCell id="inst" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#312e81;fontColor=#ffffff;strokeColor=#1e1b4b;fontSize=13;fontStyle=1;" value="Synergify Institute for AI&#xa;Registered Educational Non-Profit · legal entity" vertex="1">
+          <mxGeometry height="72" width="340" x="160" y="56" as="geometry" />
+        </mxCell>
+        <mxCell id="sasha" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3b0764;fontColor=#ffffff;strokeColor=#a78bfa;fontSize=13;fontStyle=1;" value="S.A.S.H.A&#xa;Synergema Authentica Starseed Holon Academy&#xa;Umbrella academy · spiritual-development catalog" vertex="1">
+          <mxGeometry height="92" width="380" x="780" y="56" as="geometry" />
+        </mxCell>
+        <mxCell id="board" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#475569;fontColor=#ffffff;strokeColor=#334155;fontSize=12;fontStyle=1;" value="Board of Directors&#xa;Governance · fiduciary oversight" vertex="1">
+          <mxGeometry height="58" width="210" x="225" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="alex" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0d9488;fontColor=#ffffff;strokeColor=#0f766e;fontSize=12;fontStyle=1;" value="Alexander&#xa;— Founder &amp; Board Chair —&#xa;Tech &amp; Ops · Finance · Governance" vertex="1">
+          <mxGeometry height="104" width="220" x="95" y="268" as="geometry" />
+        </mxCell>
+        <mxCell id="natalia" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#7c3aed;fontColor=#ffffff;strokeColor=#6d28d9;fontSize=12;fontStyle=1;" value="Natalia&#xa;— Executive Director —&#xa;Programs · Development · Community" vertex="1">
+          <mxGeometry height="104" width="220" x="360" y="268" as="geometry" />
+        </mxCell>
+        <mxCell id="tochka" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d97706;fontColor=#ffffff;strokeColor=#b45309;fontSize=13;fontStyle=1;" value="«Точка Сборки»&#xa;Gateway course&#xa;produced &amp; managed by the Institute" vertex="1">
+          <mxGeometry height="84" width="320" x="185" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="ticket" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f59e0b;fontColor=#7c2d12;strokeColor=#b45309;fontSize=12;fontStyle=1;" value="🎫 Golden&#xa;Admission Ticket" vertex="1">
+          <mxGeometry height="80" width="170" x="630" y="326" as="geometry" />
+        </mxCell>
+        <mxCell id="note" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#cbd5e1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;spacingRight=10;fontColor=#334155;fontSize=12;" value="Two distinct bodies. Synergify Institute for AI is the registered educational non-profit — legal operator, governance, payroll. S.A.S.H.A (Synergema Authentica Starseed Holon Academy) is the umbrella academy holding the spiritual-development catalog (astrology, shamanism, energy work, …). «Точка Сборки», produced &amp; managed by the Institute, is the gateway: completing it issues a golden admission ticket into S.A.S.H.A. No ownership link is required — the bridge is the credential. Esoteric courses in the academy are each led by an invited guest curator–producer." vertex="1">
+          <mxGeometry height="110" width="1200" x="50" y="630" as="geometry" />
+        </mxCell>
+        <mxCell id="ea_ib" edge="1" parent="1" source="inst" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#94a3b8;" target="board">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ea_ba" edge="1" parent="1" source="board" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#94a3b8;" target="alex">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ea_bn" edge="1" parent="1" source="board" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#94a3b8;" target="natalia">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ea_at" edge="1" parent="1" source="alex" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#cbd5e1;fontSize=10;fontColor=#64748b;" target="tochka" value="LMS / tech">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ea_nt" edge="1" parent="1" source="natalia" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#cbd5e1;fontSize=10;fontColor=#64748b;" target="tochka" value="programs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ea_tt" edge="1" parent="1" source="tochka" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#d4a017;strokeWidth=2;fontSize=10;fontColor=#92400e;" target="ticket" value="on completion">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ea_ts" edge="1" parent="1" source="ticket" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#d4a017;strokeWidth=3;fontSize=11;fontStyle=1;fontColor=#92400e;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="sasha" value="🎫 admits to academy">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ea_sc" edge="1" parent="1" source="sasha" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#a78bfa;" target="catalog">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="guest" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fae8ff;strokeColor=#c026d3;fontColor=#86198f;fontSize=12;fontStyle=1;dashed=1;" value="Guest Curators – Producers&#xa;(invited · one per esoteric course)" vertex="1">
+          <mxGeometry height="72" width="240" x="550" y="544" as="geometry" />
+        </mxCell>
+        <mxCell id="ea_gc" edge="1" parent="1" source="guest" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#c026d3;dashed=1;fontSize=10;fontColor=#86198f;" target="catalog" value="produce / curate">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="orgroles" name="Org &amp; Roles">
+    <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="1320" pageHeight="660" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="p1_title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=16;fontStyle=1;fontColor=#0f172a;" value="Synergify Institute for AI — Org &amp; Roles" vertex="1">
+          <mxGeometry height="28" width="640" x="40" y="12" as="geometry" />
+        </mxCell>
+        <mxCell id="pa_inst" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffbeb;strokeColor=#f59e0b;verticalAlign=top;spacingTop=6;fontSize=11;fontStyle=1;fontColor=#92400e;" value="Institute · org-building" vertex="1">
+          <mxGeometry height="230" width="270" x="40" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="pa_prod" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0fdfa;strokeColor=#0d9488;verticalAlign=top;spacingTop=6;fontSize=11;fontStyle=1;fontColor=#0f766e;" value="«Точка Сборки» · production" vertex="1">
+          <mxGeometry height="230" width="270" x="330" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="pn_inst" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffbeb;strokeColor=#f59e0b;verticalAlign=top;spacingTop=6;fontSize=11;fontStyle=1;fontColor=#92400e;" value="Institute · org-building" vertex="1">
+          <mxGeometry height="190" width="270" x="720" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="pn_prod" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f3ff;strokeColor=#7c3aed;verticalAlign=top;spacingTop=6;fontSize=11;fontStyle=1;fontColor=#6d28d9;" value="«Точка Сборки» · production" vertex="1">
+          <mxGeometry height="310" width="270" x="1010" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="ai1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#f59e0b;fontColor=#92400e;fontSize=11;" value="Governance &amp; Legal" vertex="1">
+          <mxGeometry height="34" width="240" x="55" y="336" as="geometry" />
+        </mxCell>
+        <mxCell id="ai2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#f59e0b;fontColor=#92400e;fontSize=11;" value="Finance &amp; Payroll" vertex="1">
+          <mxGeometry height="34" width="240" x="55" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="ai3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#f59e0b;fontColor=#92400e;fontSize=11;" value="Technology &amp; Platform" vertex="1">
+          <mxGeometry height="34" width="240" x="55" y="424" as="geometry" />
+        </mxCell>
+        <mxCell id="ai4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#f59e0b;fontColor=#92400e;fontSize=11;" value="Operations &amp; Admin" vertex="1">
+          <mxGeometry height="34" width="240" x="55" y="468" as="geometry" />
+        </mxCell>
+        <mxCell id="ap1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ccfbf1;strokeColor=#0d9488;fontColor=#115e59;fontSize=11;" value="Engineering" vertex="1">
+          <mxGeometry height="34" width="240" x="345" y="336" as="geometry" />
+        </mxCell>
+        <mxCell id="ap2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ccfbf1;strokeColor=#0d9488;fontColor=#115e59;fontSize=11;" value="AI / Automation" vertex="1">
+          <mxGeometry height="34" width="240" x="345" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="ap3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ccfbf1;strokeColor=#0d9488;fontColor=#115e59;fontSize=11;" value="Infrastructure" vertex="1">
+          <mxGeometry height="34" width="240" x="345" y="424" as="geometry" />
+        </mxCell>
+        <mxCell id="ap4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ccfbf1;strokeColor=#0d9488;fontColor=#115e59;fontSize=11;" value="LMS Build" vertex="1">
+          <mxGeometry height="34" width="240" x="345" y="468" as="geometry" />
+        </mxCell>
+        <mxCell id="ni1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#f59e0b;fontColor=#92400e;fontSize=11;" value="Fundraising &amp; Grants" vertex="1">
+          <mxGeometry height="34" width="240" x="735" y="336" as="geometry" />
+        </mxCell>
+        <mxCell id="ni2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#f59e0b;fontColor=#92400e;fontSize=11;" value="Partnerships &amp; Sponsors" vertex="1">
+          <mxGeometry height="34" width="240" x="735" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="ni3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#f59e0b;fontColor=#92400e;fontSize=11;" value="Marketing &amp; Community" vertex="1">
+          <mxGeometry height="34" width="240" x="735" y="424" as="geometry" />
+        </mxCell>
+        <mxCell id="np1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ede9fe;strokeColor=#7c3aed;fontColor=#5b21b6;fontSize=11;" value="Product Management" vertex="1">
+          <mxGeometry height="34" width="240" x="1025" y="336" as="geometry" />
+        </mxCell>
+        <mxCell id="np2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ede9fe;strokeColor=#7c3aed;fontColor=#5b21b6;fontSize=11;" value="Custdev" vertex="1">
+          <mxGeometry height="34" width="240" x="1025" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="np3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ede9fe;strokeColor=#7c3aed;fontColor=#5b21b6;fontSize=11;" value="Blog Authoring &amp; Co-author" vertex="1">
+          <mxGeometry height="34" width="240" x="1025" y="424" as="geometry" />
+        </mxCell>
+        <mxCell id="np4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ede9fe;strokeColor=#7c3aed;fontColor=#5b21b6;fontSize=11;" value="Content Ops" vertex="1">
+          <mxGeometry height="34" width="240" x="1025" y="468" as="geometry" />
+        </mxCell>
+        <mxCell id="np5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ede9fe;strokeColor=#7c3aed;fontColor=#5b21b6;fontSize=11;" value="UI/UX Narrative" vertex="1">
+          <mxGeometry height="34" width="240" x="1025" y="512" as="geometry" />
+        </mxCell>
+        <mxCell id="np6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ede9fe;strokeColor=#7c3aed;fontColor=#5b21b6;fontSize=11;" value="QA" vertex="1">
+          <mxGeometry height="34" width="240" x="1025" y="556" as="geometry" />
+        </mxCell>
+        <mxCell id="inst2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#312e81;fontColor=#ffffff;strokeColor=#1e1b4b;fontSize=13;fontStyle=1;" value="Synergify Institute for AI&#xa;Educational Non-Profit&#xa;Organizer · Producer · Curator — «Точка Сборки»" vertex="1">
+          <mxGeometry height="84" width="340" x="500" y="44" as="geometry" />
+        </mxCell>
+        <mxCell id="alex2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0d9488;fontColor=#ffffff;strokeColor=#0f766e;fontSize=13;fontStyle=1;" value="Alexander&#xa;Founder &amp; Board Chair · Tech &amp; Operations" vertex="1">
+          <mxGeometry height="66" width="300" x="170" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="nat2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#7c3aed;fontColor=#ffffff;strokeColor=#6d28d9;fontSize=13;fontStyle=1;" value="Natalia&#xa;Executive Director · Programs &amp; Development" vertex="1">
+          <mxGeometry height="66" width="300" x="870" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="e_i_a" edge="1" parent="1" source="inst2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#94a3b8;" target="alex2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_i_n" edge="1" parent="1" source="inst2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#94a3b8;" target="nat2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_a_pi" edge="1" parent="1" source="alex2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#cbd5e1;" target="pa_inst">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_a_pp" edge="1" parent="1" source="alex2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#cbd5e1;" target="pa_prod">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_n_pi" edge="1" parent="1" source="nat2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#cbd5e1;" target="pn_inst">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_n_pp" edge="1" parent="1" source="nat2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#cbd5e1;" target="pn_prod">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="opmodel" name="Operating &amp; Funding Model">
+    <mxGraphModel dx="1354" dy="686" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1240" pageHeight="540" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="p2_title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=16;fontStyle=1;fontColor=#0f172a;" value="Synergify Institute — Operating &amp; Funding Model" vertex="1">
+          <mxGeometry height="28" width="640" x="40" y="14" as="geometry" />
+        </mxCell>
+        <mxCell id="fund_lbl" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#64748b;" value="Funding (mission-funded · no tuition)" vertex="1">
+          <mxGeometry height="22" width="300" x="40" y="86" as="geometry" />
+        </mxCell>
+        <mxCell id="g1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;fontColor=#075985;fontSize=11;" value="Гранты&#xa;Фонды · образ./AI-программы" vertex="1">
+          <mxGeometry height="60" width="240" x="40" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="g2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;fontColor=#075985;fontSize=11;" value="Пожертвования&#xa;Доноры · краудфандинг · recurring" vertex="1">
+          <mxGeometry height="60" width="240" x="40" y="196" as="geometry" />
+        </mxCell>
+        <mxCell id="g3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;fontColor=#075985;fontSize=11;" value="Корп. спонсоры / партнёрства&#xa;Спонс. пакеты · B2B-контракты" vertex="1">
+          <mxGeometry height="60" width="240" x="40" y="272" as="geometry" />
+        </mxCell>
+        <mxCell id="budget" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#312e81;fontColor=#ffffff;strokeColor=#1e1b4b;fontSize=13;fontStyle=1;" value="Synergify Institute&#xa;— Operating Budget —&#xa;Mission-funded · no tuition" vertex="1">
+          <mxGeometry height="140" width="250" x="360" y="156" as="geometry" />
+        </mxCell>
+        <mxCell id="payroll" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#475569;fontColor=#ffffff;strokeColor=#334155;fontSize=12;fontStyle=1;" value="Payroll&#xa;Salaried staff ·&#xa;board-approved&#xa;reasonable comp" vertex="1">
+          <mxGeometry height="92" width="190" x="700" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="p_alex" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0d9488;fontColor=#ffffff;strokeColor=#0f766e;fontSize=12;fontStyle=1;" value="Alexander&lt;br&gt;Founder &amp;amp; Board Chair (salaried)" vertex="1">
+          <mxGeometry height="60" width="210" x="970" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="p_nat" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#7c3aed;fontColor=#ffffff;strokeColor=#6d28d9;fontSize=12;fontStyle=1;" value="Natalia&#xa;Executive Director (salaried)" vertex="1">
+          <mxGeometry height="60" width="210" x="970" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="note2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#cbd5e1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;spacingRight=10;fontColor=#334155;fontSize=12;" value="Non-profit model: «Точка Сборки» is delivered as a mission programme (free / grant-funded — no tuition). The Institute is funded by grants, donations and corporate sponsors / partnerships. Alexander (Founder) &amp; Natalia (Executive Director) are salaried staff paid from the operating budget at board-approved, market-reasonable compensation. Any surplus is reinvested into programmes — there is no profit distribution to founders." vertex="1">
+          <mxGeometry height="110" width="1140" x="40" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="e_g1_b" edge="1" parent="1" source="g1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#0284c7;" target="budget">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_g2_b" edge="1" parent="1" source="g2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#0284c7;" target="budget">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_g3_b" edge="1" parent="1" source="g3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#0284c7;" target="budget">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_b_p" edge="1" parent="1" source="budget" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#64748b;fontSize=10;fontColor=#475569;" target="payroll" value="funds">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_p_a" edge="1" parent="1" source="payroll" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#64748b;fontSize=10;fontColor=#475569;" target="p_alex" value="salary">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_p_n" edge="1" parent="1" source="payroll" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#64748b;fontSize=10;fontColor=#475569;" target="p_nat" value="salary">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="roadmap" name="Roadmap H2 2026">
+    <mxGraphModel dx="1020" dy="580" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1020" pageHeight="580" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="p3_title" value="Точка Сборки — Programme &amp; Org Roadmap (H2 2026)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=16;fontStyle=1;fontColor=#0f172a;" vertex="1" parent="1">
+          <mxGeometry x="40" y="14" width="640" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="bg_p1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#e2e8f0;" vertex="1" parent="1">
+          <mxGeometry x="240" y="116" width="180" height="412" as="geometry" />
+        </mxCell>
+        <mxCell id="bg_p2" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#e2e8f0;" vertex="1" parent="1">
+          <mxGeometry x="420" y="116" width="180" height="412" as="geometry" />
+        </mxCell>
+        <mxCell id="bg_p3" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#e2e8f0;" vertex="1" parent="1">
+          <mxGeometry x="600" y="116" width="180" height="412" as="geometry" />
+        </mxCell>
+        <mxCell id="bg_p4" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#e2e8f0;" vertex="1" parent="1">
+          <mxGeometry x="780" y="116" width="180" height="412" as="geometry" />
+        </mxCell>
+        <mxCell id="h_left" value="Programme &amp; org timeline" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#0f172a;fontColor=#ffffff;strokeColor=#0f172a;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="56" width="200" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="h_p1" value="Jun–Jul &#39;26&#xa;Form + Blog + Custdev" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1e293b;fontColor=#ffffff;strokeColor=#1e293b;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="240" y="56" width="180" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="h_p2" value="Aug–Sep &#39;26&#xa;LMS course build" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1e293b;fontColor=#ffffff;strokeColor=#1e293b;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="420" y="56" width="180" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="h_p3" value="Oct–Nov &#39;26&#xa;QA + polish" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1e293b;fontColor=#ffffff;strokeColor=#1e293b;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="600" y="56" width="180" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="h_p4" value="Dec &#39;26&#xa;Soft launch 🚀" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1e293b;fontColor=#ffffff;strokeColor=#1e293b;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="780" y="56" width="180" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="l1" value="Institute formation" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#cbd5e1;align=left;spacingLeft=8;fontSize=12;fontStyle=1;fontColor=#334155;" vertex="1" parent="1">
+          <mxGeometry x="40" y="116" width="200" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="l2" value="Fundraising / Grants" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#cbd5e1;align=left;spacingLeft=8;fontSize=12;fontStyle=1;fontColor=#334155;" vertex="1" parent="1">
+          <mxGeometry x="40" y="176" width="200" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="l3" value="Custdev" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#cbd5e1;align=left;spacingLeft=8;fontSize=12;fontStyle=1;fontColor=#334155;" vertex="1" parent="1">
+          <mxGeometry x="40" y="236" width="200" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="l4" value="Blog «Горизонты»" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#cbd5e1;align=left;spacingLeft=8;fontSize=12;fontStyle=1;fontColor=#334155;" vertex="1" parent="1">
+          <mxGeometry x="40" y="296" width="200" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="l5" value="LMS course build" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#cbd5e1;align=left;spacingLeft=8;fontSize=12;fontStyle=1;fontColor=#334155;" vertex="1" parent="1">
+          <mxGeometry x="40" y="356" width="200" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="l6" value="UI/UX &amp; Content" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#cbd5e1;align=left;spacingLeft=8;fontSize=12;fontStyle=1;fontColor=#334155;" vertex="1" parent="1">
+          <mxGeometry x="40" y="416" width="200" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="l7" value="QA &amp; Launch" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#cbd5e1;align=left;spacingLeft=8;fontSize=12;fontStyle=1;fontColor=#334155;" vertex="1" parent="1">
+          <mxGeometry x="40" y="476" width="200" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b1" value="нко · board · grants setup — [A]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b45309;fontColor=#ffffff;strokeColor=none;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="240" y="128" width="180" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="b2" value="Grants · donors · sponsors — [N]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#be123c;fontColor=#ffffff;strokeColor=none;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="240" y="188" width="720" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="b3" value="Interviews · validation — [N]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2563eb;fontColor=#ffffff;strokeColor=none;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="240" y="248" width="240" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="b4" value="«Горизонты» author &amp; co-author — [N]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#db2777;fontColor=#ffffff;strokeColor=none;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="240" y="308" width="540" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="b5" value="LMS course build — [A+N]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0d9488;fontColor=#ffffff;strokeColor=none;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="420" y="368" width="360" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="b6" value="UI/UX narrative · content ops — [N]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#7c3aed;fontColor=#ffffff;strokeColor=none;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="420" y="428" width="360" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="b7" value="QA · soft launch 🚀 — [A+N]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#16a34a;fontColor=#ffffff;strokeColor=none;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="600" y="488" width="360" height="28" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

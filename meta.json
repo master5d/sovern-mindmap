@@ -1,0 +1,24 @@
+{
+  "identifier": "pro-20260728-mmap",
+  "title": "MindMapping",
+  "type": "project",
+  "status": "active",
+  "created": "2026-06-16",
+  "updated": "2026-07-28",
+  "description": "AI diagramming canvas. Код — вложенный репозиторий sovern-mindmap (private master5d/sovern-mindmap): React-Flow граф, draw.io импорт/экспорт, learn-HTML экспорт, MCP-сервер и dev-мост к DesOps artifact inbox. Рядом PRD и справочные материалы.",
+  "team": "personal",
+  "llm_context_priority": 2,
+  "loop": {
+    "ground_truth": "vitest-сьют репозитория (43 файла / 281 тест) + `npm run build`; для dev-мостов сьют НЕ покрывает адаптерный шов — там живой смок дев-сервера (POST /api/artifacts/*, экспорт через junction-стенд, прогон pre-commit с реальным нарушением)",
+    "drift": {
+      "monitors": [
+        "DesOps design-gate в pre-commit (sync-global-tokens → lint-design, semgrep-набор)",
+        "deps-gate на push (trivy) + Dependabot",
+        "guard-probes NAUTILUS (пробы установленных хуков, обе стороны)"
+      ],
+      "half_life_days": 30
+    },
+    "activation": "красный сьют/сборка → фикс до коммита; находка design-gate → правка токенов, не подавление; deps-алерт → бамп с проверкой кроссплатформенных биндингов в локе; дефект, найденный смоком но не сьютом → сначала тест на инвариант, потом фикс (эмпирика 2026-07-27: три таких дефекта сьют не видел)",
+    "audited": "2026-07-28"
+  }
+}
