@@ -5,7 +5,7 @@
   "status": "active",
   "created": "2026-06-16",
   "updated": "2026-07-28",
-  "description": "AI diagramming canvas. Код — вложенный репозиторий sovern-mindmap (private master5d/sovern-mindmap): React-Flow граф, draw.io импорт/экспорт, learn-HTML экспорт, MCP-сервер и dev-мост к DesOps artifact inbox. Рядом PRD и справочные материалы.",
+  "description": "AI diagramming canvas: React-Flow граф, draw.io импорт/экспорт, learn-HTML экспорт, MCP-сервер и dev-мост к DesOps artifact inbox. Репозиторий private master5d/sovern-mindmap охватывает весь каталог проекта — код, PRD и meta (корень поднят 2026-07-28); справочный архив и колоды вне гита по размеру.",
   "team": "personal",
   "llm_context_priority": 2,
   "loop": {
