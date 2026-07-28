@@ -4,9 +4,13 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { dirname, join, resolve, sep } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { readArtifacts, readArtifactsWithDecisions, appendDecision } from './src/mcp/artifactInbox';
 import { BodyTooLargeError, readBodyCapped } from './src/mcp/httpBody';
+import { resolveContained } from './src/mcp/pathContainment';
+
+/** Единственный корень, куда дев-мост имеет право писать. */
+const TELO_ROOT = 'C:\\telo';
 
 /** 413 вместо молчаливого проглатывания — общий хвост для всех POST-мостов.
  *  Порядок важен: сначала ответ, и только потом обрыв недочитанного запроса —
@@ -186,12 +190,16 @@ const serveArtifacts = (): Plugin => ({
               return;
             }
 
-            const resolvedProjectDir = resolve(projectDir);
-            if (!resolvedProjectDir.toLowerCase().startsWith('c:\\telo\\')) {
+            // Контейнмент считается ПОСЛЕ разворота симлинков: `resolve()`
+            // лексический, и junction внутри пути уводит запись наружу,
+            // оставаясь «внутри» по строке.
+            const projectContained = resolveContained(projectDir, TELO_ROOT);
+            if (!projectContained.ok) {
               res.statusCode = 400;
-              res.end(JSON.stringify({ ok: false, error: 'projectDir must resolve under C:\\telo\\' }));
+              res.end(JSON.stringify({ ok: false, error: `projectDir must resolve under ${TELO_ROOT}` }));
               return;
             }
+            const resolvedProjectDir = projectContained.path;
 
             const safeName = kebab(name);
             if (!FILENAME_RE.test(safeName)) {
@@ -208,14 +216,33 @@ const serveArtifacts = (): Plugin => ({
             }
 
             const draftsDir = resolve(resolvedProjectDir, 'design', 'drafts');
-            const finalPath = resolve(draftsDir, `${safeName}.tsx`);
-            if (!finalPath.startsWith(draftsDir + sep)) {
+            // Каталог создаётся ДО проверки: пока его нет, разворачивать
+            // нечего — junction, подменяющий design/ или drafts/, виден
+            // realpath'у только после того, как путь существует.
+            mkdirSync(draftsDir, { recursive: true });
+
+            // Две проверки, и обе нужны. Первая: сам каталог drafts обязан
+            // реально лежать под C:\telo — иначе junction, подменяющий
+            // design/ или drafts/, стал бы новым «корнем», и проверка файла
+            // относительно него прошла бы, уже находясь снаружи.
+            const draftsContained = resolveContained(draftsDir, TELO_ROOT);
+            if (!draftsContained.ok) {
+              res.statusCode = 400;
+              res.end(JSON.stringify({ ok: false, error: `design/drafts resolves outside ${TELO_ROOT}` }));
+              return;
+            }
+            // Вторая: имя файла не выводит за пределы уже проверенного каталога.
+            const fileContained = resolveContained(
+              resolve(draftsContained.path, `${safeName}.tsx`),
+              draftsContained.path,
+            );
+            if (!fileContained.ok) {
               res.statusCode = 400;
               res.end(JSON.stringify({ ok: false, error: 'resolved path escapes design/drafts' }));
               return;
             }
+            const finalPath = fileContained.path;
 
-            mkdirSync(draftsDir, { recursive: true });
             writeFileSync(finalPath, artifact.code, 'utf8');
             appendDecision({
               artifactId,
