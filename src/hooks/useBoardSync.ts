@@ -2,8 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useWorkflowStore } from '../store/useWorkflowStore';
 import { loadBoardsRegistry } from '../utils/persistence';
 import { fromJSONCanvas } from '../utils/canvasConverter';
-
-const POLL_MS = 3000;
+import { POLL_MS, nextDelay } from './pollBackoff';
 
 /**
  * Browser-режим: грузит /board.canvas при старте и поллит изменения.
@@ -23,8 +22,12 @@ export const useBoardSync = (
   useEffect(() => {
     let alive = true;
     let timer: ReturnType<typeof setTimeout>;
+    // Отступ при ошибках: упавший дев-сервер иначе опрашивается вечно
+    // с базовым интервалом. Сбрасывается первым же успешным ответом.
+    let delay = POLL_MS;
 
     const tick = async (first: boolean) => {
+      let ok = true;
       try {
         const res = await fetch('/board.canvas', { cache: 'no-store' });
         if (!res.ok) throw new Error(String(res.status));
@@ -68,9 +71,11 @@ export const useBoardSync = (
         }
         if (first) onFirstLoadRef.current(true);
       } catch {
+        ok = false;
         if (first && alive) onFirstLoadRef.current(false);
       } finally {
-        if (alive) timer = setTimeout(() => tick(false), POLL_MS);
+        delay = nextDelay(delay, ok);
+        if (alive) timer = setTimeout(() => tick(false), delay);
       }
     };
 

@@ -7,6 +7,7 @@ import { Node } from '@xyflow/react';
 import { useWorkflowStore, withoutHistory, stripArtifactContent } from '../store/useWorkflowStore';
 import { ArtifactNodeData, SOVERNNodeData } from '../types';
 import { isTombstoned } from './artifactTombstones';
+import { nextDelay } from './pollBackoff';
 
 /** Wire shape from GET /api/artifacts (snake_case, matches src/mcp/artifactInbox.ts).
  * `decision`/`exportedTo` are server-merged from the decisions ledger (Fix 1: an
@@ -210,22 +211,36 @@ export function useArtifactInbox(): number {
   const [pendingCount, setPendingCount] = useState(0);
   useEffect(() => {
     let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    // Отступ обязателен именно здесь: в Tauri-сборке middleware нет вовсе,
+    // значит эндпоинт недоступен ВСЕГДА — без него поллер молча стучится
+    // каждые 2 секунды до конца сессии. С отступом он затухает до потолка.
+    let delay = POLL_MS;
+
     const tick = async () => {
+      let ok = true;
       try {
         const res = await fetch('/api/artifacts');
-        if (!res.ok) return;
+        if (!res.ok) {
+          ok = false;
+          return;
+        }
         const json = await res.json();
         if (!cancelled && Array.isArray(json?.artifacts)) {
           setPendingCount(processArtifactPoll(json.artifacts));
         }
       } catch {
         // no middleware (Tauri prod) or transient network error — skip silently
+        ok = false;
+      } finally {
+        delay = nextDelay(delay, ok);
+        if (!cancelled) timer = setTimeout(tick, delay);
       }
     };
-    const id = setInterval(tick, POLL_MS);
+    timer = setTimeout(tick, delay);
     return () => {
       cancelled = true;
-      clearInterval(id);
+      clearTimeout(timer);
     };
   }, []);
   return pendingCount;

@@ -5,6 +5,11 @@
     "moduleResolution": "NodeNext",
     "target": "ES2022",
     "lib": ["ES2022"],
+    // Node-сборка: DOM отрезан выше через lib, а jsx приходил по наследству
+    // от базового конфига ("react-jsx"). Файлов .tsx здесь нет, так что эффект
+    // латентный — но добавленный сюда .tsx собрался бы с React-семантикой
+    // в процесс, где React нет. Гасим явно.
+    "jsx": "preserve",
     "outDir": "dist-mcp",
     "noEmit": false,
     "allowImportingTsExtensions": false,
