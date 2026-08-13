@@ -10,7 +10,9 @@ export async function requestCompletion(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ model: MODEL, messages, temperature: 0.2 }),
-    signal: opts?.signal,
+    // Дефолтный таймаут: зависший gateway не должен вешать вызов навсегда.
+    // Вызывающий со своим signal сохраняет полный контроль (в т.ч. без таймаута).
+    signal: opts?.signal ?? AbortSignal.timeout(60_000),
   });
   if (!res.ok) throw new Error(`gateway ${res.status}`);
   const data = await res.json();
