@@ -196,8 +196,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 });
 
 async function main() {
+  // Заглушка не скрывается: состояние живёт только в памяти процесса.
+  console.error("sovern-mindmap-server: graph backend: in-memory stub");
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }
 
-main().catch(console.error);
+// Провал старта stdio-сервера не должен завершаться с exit 0.
+main().catch((e) => {
+  console.error(e);
+  process.exitCode = 1;
+});
