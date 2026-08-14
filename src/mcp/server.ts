@@ -4,14 +4,20 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { GraphManager } from "../utils/graphManager.js";
-import type { AppNode, SOVERNLayer, NodeStatus } from "../types/index.js";
-import { randomUUID } from 'crypto';
 import { appendArtifact, readDecisions } from "./artifactInbox.js";
+import {
+  CanvasFileStore,
+  resolveBoardPath,
+  createCanvasNode,
+  updateCanvasNode,
+  readCanvasBranch,
+  calculateCanvasRollup,
+} from "./canvasFileStore.js";
 
-// In a real Phase 3, this would connect to the Tauri state via IPC or a Shared File
-// For now, we initialize an internal GraphManager instance to demonstrate the logic.
-const graphManager = new GraphManager();
+// Файловый бэкенд: тот же board.canvas, который поллит UI (env SOVERN_BOARD,
+// дефолт совпадает с vite.config.ts). Каждый инструмент перечитывает файл,
+// мутации пишутся атомарно — см. canvasFileStore.ts.
+const store = new CanvasFileStore(resolveBoardPath());
 
 const server = new Server(
   {
@@ -125,40 +131,42 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     switch (name) {
       case "read_graph":
         return {
-          content: [{ type: "text", text: JSON.stringify(graphManager.toCanvas(), null, 2) }],
+          content: [{ type: "text", text: JSON.stringify(store.read(), null, 2) }],
         };
 
-      case "create_node": {
-        const id = randomUUID();
-        const newNode: AppNode = {
-          id,
-          type: 'sovern',
-          position: { x: Math.random() * 500, y: Math.random() * 500 },
-          data: {
-            label: args?.label as string,
-            layer: args?.layer as SOVERNLayer,
-            status: (args?.status as NodeStatus) || 'idle',
-            budget: args?.budget as number,
-          },
-        };
-        graphManager.addNode(newNode, args?.parent_id as string);
+      case "read_branch": {
+        const branch = readCanvasBranch(store.read(), args?.node_id as string);
         return {
-          content: [{ type: "text", text: `Node created with ID: ${id}` }],
+          content: [{ type: "text", text: JSON.stringify(branch, null, 2) }],
+        };
+      }
+
+      case "create_node": {
+        const node = store.mutate((canvas) =>
+          createCanvasNode(canvas, {
+            label: args?.label as string,
+            layer: args?.layer as string,
+            parentId: args?.parent_id as string | undefined,
+            status: args?.status as string | undefined,
+            budget: args?.budget as number | undefined,
+          })
+        );
+        return {
+          content: [{ type: "text", text: `Node created with ID: ${node.id}` }],
         };
       }
 
       case "update_node": {
-        graphManager.updateNode(args?.node_id as string, args?.patch as any);
+        store.mutate((canvas) =>
+          updateCanvasNode(canvas, args?.node_id as string, args?.patch as any)
+        );
         return {
           content: [{ type: "text", text: `Node ${args?.node_id} updated successfully.` }],
         };
       }
 
       case "calculate_budget_rollup": {
-        graphManager.recalculate();
-        const nodes = graphManager.getNodes();
-        const node = nodes.find(n => n.id === args?.node_id);
-        const total = (node?.type === 'sovern' ? (node.data.rollupBudget || node.data.budget) : 0) || 0;
+        const total = calculateCanvasRollup(store.read(), args?.node_id as string);
         return {
           content: [{ type: "text", text: `Total rollup budget for ${args?.node_id}: $${total}` }],
         };
@@ -196,8 +204,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 });
 
 async function main() {
-  // Заглушка не скрывается: состояние живёт только в памяти процесса.
-  console.error("sovern-mindmap-server: graph backend: in-memory stub");
+  console.error(`sovern-mindmap-server: graph backend: ${store.path}`);
+  if (!store.exists()) {
+    console.error(
+      "sovern-mindmap-server: board file not found — reads return an empty graph; " +
+        "the first mutation will create it"
+    );
+  }
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }

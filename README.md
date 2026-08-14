@@ -101,6 +101,19 @@ The MCP server (`src/mcp`) exposes `create_artifact_node` and `read_artifact_dec
 *   **Runtime bridge:** the canvas dev server (`vite.config.ts`) polls the same `.sovern/artifact-inbox.jsonl` / `artifact-decisions.jsonl` ledger every 2s via `GET /api/artifacts`, so artifact nodes created through the MCP tools appear on the canvas without a page reload, already reconciled with any prior decision (an artifact that was already approved/rejected in an earlier session re-ingests with that status, not `pending`).
 *   **Decisions (2026-07-10):** three verdicts — `approved` / `rejected` / `deleted`. Deleting an artifact node on the Design Review board writes a `deleted` tombstone; the feed filters latest-deleted artifacts, so they never resurrect. Approve+Export records a **single** ledger row (`approved` + `variant_group` + `exportedTo`) via `/export`.
 
+### Graph backend (2026-08-14): файл, не in-memory
+
+Графовые инструменты (`read_graph` / `read_branch` / `create_node` / `update_node` / `calculate_budget_rollup`) работают с **тем же `board.canvas`, который поллит UI**: путь берётся из env `SOVERN_BOARD` — то же имя и тот же дефолт, что у `vite.config.ts` (`C:/telo/Efforts/Ongoing/mc_hub/feedback/board.canvas`). In-memory заглушка упразднена; сервер печатает путь бэкенда на старте.
+
+*   **Формат не трогаем:** мутации правят сырой JSON Canvas точечно (только запрошенные поля) — width/height, порядок нод и незнакомые `metadata`-ключи сохраняются байт-в-байт. Round-trip через React-Flow-конверсию сознательно НЕ используется — он терял геометрию и чужие ключи.
+*   **Конкурентный доступ:** каждый инструмент перечитывает файл заново, запись атомарная (tmp + rename) — UI-поллер не увидит недописанный JSON, а правки UI/fb.mjs между вызовами не перетираются.
+*   **Файла нет** → `read_graph` возвращает пустой граф (warning в stderr), первая мутация создаёт файл.
+
+**Известные ограничения (честно):**
+
+1.  Дефолтный `board.canvas` — **производный артефакт**: `fb.mjs build` пересобирает его из `feedback.jsonl`, и ноды, созданные MCP-инструментами напрямую в канвасе, при следующем rebuild исчезнут. Для долговечного авторинга либо направь `SOVERN_BOARD` на самостоятельный (не генерируемый) `.canvas`-файл, либо заводи feedback-тикеты через `fb.mjs add`.
+2.  Пользовательские **доски (tabs) в браузерном режиме живут в `localStorage`** — файловому MCP-серверу они недоступны в принципе; MCP видит только file-доску (живое зеркало `board.canvas`). В Tauri-режиме доски лежат в appData (`boards/<id>.canvas`) — при желании `SOVERN_BOARD` можно навести на конкретную доску.
+
 ---
 
 ## 📂 Project Structure

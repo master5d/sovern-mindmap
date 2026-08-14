@@ -1,0 +1,224 @@
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { mkdtempSync, rmSync, readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import {
+  CanvasFileStore,
+  resolveBoardPath,
+  DEFAULT_BOARD_PATH,
+  createCanvasNode,
+  updateCanvasNode,
+  readCanvasBranch,
+  calculateCanvasRollup,
+} from './canvasFileStore';
+import type { JSONCanvas } from '../types/index';
+
+// Фикстура повторяет реальный формат board.canvas владельца (fb.mjs build):
+// text-ноды с sovern:* metadata + ключи, которых наша модель не знает.
+const ownerFixture: JSONCanvas = {
+  nodes: [
+    {
+      id: 'area_lms',
+      type: 'text',
+      x: 0,
+      y: 0,
+      width: 200,
+      height: 80,
+      text: '📂 LMS',
+      metadata: {
+        'sovern:layer': 'lms',
+        'sovern:status': 'idle',
+        'sovern:impact': 5,
+        'sovern:urgency': 5,
+      },
+    },
+    {
+      id: 'fb_aaaaaaaaaaaa',
+      type: 'text',
+      x: 40,
+      y: 160,
+      width: 260,
+      height: 120,
+      text: 'починить логин',
+      metadata: {
+        'sovern:layer': 'lms',
+        'sovern:status': 'pending',
+        'sovern:budget': 100,
+        'custom:unknown-key': 'must survive',
+      },
+    },
+    {
+      id: 'fb_bbbbbbbbbbbb',
+      type: 'text',
+      x: 40,
+      y: 320,
+      width: 260,
+      height: 120,
+      text: 'вторая задача',
+      metadata: { 'sovern:layer': 'lms', 'sovern:status': 'idle', 'sovern:budget': 50 },
+    },
+  ],
+  edges: [
+    { id: 'e1', fromNode: 'area_lms', toNode: 'fb_aaaaaaaaaaaa' },
+    { id: 'e2', fromNode: 'fb_aaaaaaaaaaaa', toNode: 'fb_bbbbbbbbbbbb' },
+  ],
+};
+
+let dir: string;
+let boardPath: string;
+
+beforeEach(() => {
+  dir = mkdtempSync(join(tmpdir(), 'canvas-store-'));
+  boardPath = join(dir, 'board.canvas');
+});
+
+afterEach(() => {
+  rmSync(dir, { recursive: true, force: true });
+});
+
+const writeFixture = () =>
+  writeFileSync(boardPath, JSON.stringify(ownerFixture, null, 2) + '\n', 'utf8');
+
+describe('resolveBoardPath', () => {
+  it('честит env SOVERN_BOARD, иначе дефолт совпадает с vite.config.ts', () => {
+    const prev = process.env.SOVERN_BOARD;
+    try {
+      process.env.SOVERN_BOARD = 'X:/somewhere/b.canvas';
+      expect(resolveBoardPath()).toBe('X:/somewhere/b.canvas');
+      delete process.env.SOVERN_BOARD;
+      expect(resolveBoardPath()).toBe(DEFAULT_BOARD_PATH);
+      expect(DEFAULT_BOARD_PATH).toBe('C:/telo/Efforts/Ongoing/mc_hub/feedback/board.canvas');
+    } finally {
+      if (prev === undefined) delete process.env.SOVERN_BOARD;
+      else process.env.SOVERN_BOARD = prev;
+    }
+  });
+});
+
+describe('CanvasFileStore.read', () => {
+  it('читает реальный формат владельца без потерь', () => {
+    writeFixture();
+    const canvas = new CanvasFileStore(boardPath).read();
+    expect(canvas).toEqual(ownerFixture);
+  });
+
+  it('файла нет → пустой граф, не крах', () => {
+    const store = new CanvasFileStore(boardPath);
+    expect(store.exists()).toBe(false);
+    expect(store.read()).toEqual({ nodes: [], edges: [] });
+  });
+
+  it('битый JSON → честная ошибка с путём', () => {
+    writeFileSync(boardPath, '{ not json', 'utf8');
+    expect(() => new CanvasFileStore(boardPath).read()).toThrow(/board\.canvas.*unreadable/);
+  });
+
+  it('валидный JSON, но не canvas → честная ошибка', () => {
+    writeFileSync(boardPath, '{"foo": 1}', 'utf8');
+    expect(() => new CanvasFileStore(boardPath).read()).toThrow(/not a JSON Canvas/);
+  });
+});
+
+describe('CanvasFileStore.mutate', () => {
+  it('атомарная запись: tmp-файлов не остаётся, файл — валидный canvas с \\n на конце', () => {
+    writeFixture();
+    const store = new CanvasFileStore(boardPath);
+    store.mutate((c) => createCanvasNode(c, { label: 'new', layer: 'lms' }));
+    expect(readdirSync(dir)).toEqual(['board.canvas']);
+    const raw = readFileSync(boardPath, 'utf8');
+    expect(raw.endsWith('}\n')).toBe(true);
+    expect(JSON.parse(raw).nodes).toHaveLength(4);
+  });
+
+  it('перечитывает файл перед мутацией: параллельная правка UI не теряется', () => {
+    writeFixture();
+    const store = new CanvasFileStore(boardPath);
+    store.read(); // сервер уже «видел» старую версию
+    // UI/fb.mjs дописали ноду между нашими вызовами
+    const external: JSONCanvas = JSON.parse(readFileSync(boardPath, 'utf8'));
+    external.nodes.push({
+      id: 'ui_added',
+      type: 'text',
+      x: 1,
+      y: 1,
+      width: 10,
+      height: 10,
+      text: 'ui',
+    });
+    writeFileSync(boardPath, JSON.stringify(external, null, 2) + '\n', 'utf8');
+
+    store.mutate((c) => createCanvasNode(c, { label: 'mcp', layer: 'lms' }));
+    const final: JSONCanvas = JSON.parse(readFileSync(boardPath, 'utf8'));
+    const ids = final.nodes.map((n) => n.id);
+    expect(ids).toContain('ui_added'); // правка UI выжила
+    expect(final.nodes).toHaveLength(5); // 3 фикстуры + ui + mcp
+  });
+
+  it('мутация первого запуска создаёт файл', () => {
+    const store = new CanvasFileStore(boardPath);
+    store.mutate((c) => createCanvasNode(c, { label: 'first', layer: 'projects' }));
+    expect(existsSync(boardPath)).toBe(true);
+    expect(JSON.parse(readFileSync(boardPath, 'utf8')).nodes).toHaveLength(1);
+  });
+});
+
+describe('операции над сырым канвасом', () => {
+  it('createCanvasNode: нода + ребро от родителя, sovern:* metadata', () => {
+    const canvas = structuredClone(ownerFixture);
+    const node = createCanvasNode(canvas, {
+      label: 'дочка',
+      layer: 'lms',
+      parentId: 'area_lms',
+      status: 'active',
+      budget: 25,
+    });
+    expect(canvas.nodes[canvas.nodes.length - 1].id).toBe(node.id);
+    expect(node.metadata).toMatchObject({
+      'sovern:layer': 'lms',
+      'sovern:status': 'active',
+      'sovern:budget': 25,
+    });
+    const edge = canvas.edges[canvas.edges.length - 1];
+    expect(edge.fromNode).toBe('area_lms');
+    expect(edge.toNode).toBe(node.id);
+  });
+
+  it('createCanvasNode: несуществующий родитель → ошибка, канвас не тронут', () => {
+    const canvas = structuredClone(ownerFixture);
+    expect(() => createCanvasNode(canvas, { label: 'x', layer: 'lms', parentId: 'nope' })).toThrow(
+      /Parent node not found/
+    );
+    expect(canvas.nodes).toHaveLength(3);
+  });
+
+  it('updateCanvasNode: патчит только своё, чужие metadata и геометрия целы', () => {
+    const canvas = structuredClone(ownerFixture);
+    updateCanvasNode(canvas, 'fb_aaaaaaaaaaaa', { label: 'починено', status: 'done', agent: 'claude' });
+    const node = canvas.nodes.find((n) => n.id === 'fb_aaaaaaaaaaaa')!;
+    expect(node.text).toBe('починено');
+    expect(node.metadata!['sovern:status']).toBe('done');
+    expect(node.metadata!['sovern:agent']).toBe('claude');
+    // незнакомый ключ и размеры не потеряны (главный риск round-trip конверсии)
+    expect(node.metadata!['custom:unknown-key']).toBe('must survive');
+    expect(node.width).toBe(260);
+    expect(node.height).toBe(120);
+  });
+
+  it('updateCanvasNode: несуществующая нода → ошибка, а не тихий успех', () => {
+    expect(() => updateCanvasNode(structuredClone(ownerFixture), 'nope', { label: 'x' })).toThrow(
+      /Node not found/
+    );
+  });
+
+  it('readCanvasBranch: поддерево по направленным рёбрам', () => {
+    const branch = readCanvasBranch(ownerFixture, 'fb_aaaaaaaaaaaa');
+    expect(branch.nodes.map((n) => n.id).sort()).toEqual(['fb_aaaaaaaaaaaa', 'fb_bbbbbbbbbbbb']);
+    expect(branch.edges.map((e) => e.id)).toEqual(['e2']);
+    expect(() => readCanvasBranch(ownerFixture, 'nope')).toThrow(/Node not found/);
+  });
+
+  it('calculateCanvasRollup: сумма sovern:budget по поддереву', () => {
+    expect(calculateCanvasRollup(ownerFixture, 'area_lms')).toBe(150);
+    expect(calculateCanvasRollup(ownerFixture, 'fb_bbbbbbbbbbbb')).toBe(50);
+  });
+});
