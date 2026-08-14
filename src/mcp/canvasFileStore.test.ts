@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
+import {
+  mkdtempSync,
+  rmSync,
+  readFileSync,
+  writeFileSync,
+  readdirSync,
+  existsSync,
+  utimesSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -10,6 +18,7 @@ import {
   updateCanvasNode,
   readCanvasBranch,
   calculateCanvasRollup,
+  withFileLock,
 } from './canvasFileStore';
 import type { JSONCanvas } from '../types/index';
 
@@ -152,6 +161,55 @@ describe('CanvasFileStore.mutate', () => {
     const ids = final.nodes.map((n) => n.id);
     expect(ids).toContain('ui_added'); // правка UI выжила
     expect(final.nodes).toHaveLength(5); // 3 фикстуры + ui + mcp
+  });
+
+  it('мутация берёт межпроцессный лок и снимает его за собой', () => {
+    writeFixture();
+    const store = new CanvasFileStore(boardPath);
+    let lockedDuringMutation = false;
+    store.mutate((c) => {
+      lockedDuringMutation = existsSync(`${boardPath}.lock`);
+      return createCanvasNode(c, { label: 'x', layer: 'lms' });
+    });
+    expect(lockedDuringMutation).toBe(true);
+    expect(existsSync(`${boardPath}.lock`)).toBe(false);
+  });
+
+  it('лок занят чужим процессом → мутация ПАДАЕТ, а не затирает его запись', () => {
+    writeFixture();
+    // чужой держатель: свежий lock-файл, который никто не отпустит
+    writeFileSync(`${boardPath}.lock`, '424242\n', 'utf8');
+    const store = new CanvasFileStore(boardPath, { timeoutMs: 120 });
+    expect(() =>
+      store.mutate((c) => createCanvasNode(c, { label: 'проигравший', layer: 'lms' }))
+    ).toThrow(/busy — held by another process/);
+    // файл не тронут: 3 ноды фикстуры, чужой лок на месте
+    expect(JSON.parse(readFileSync(boardPath, 'utf8')).nodes).toHaveLength(3);
+    expect(existsSync(`${boardPath}.lock`)).toBe(true);
+    rmSync(`${boardPath}.lock`, { force: true });
+  });
+
+  it('протухший лок (процесс убит) снимается, мутация проходит', () => {
+    writeFixture();
+    const lockPath = `${boardPath}.lock`;
+    writeFileSync(lockPath, '424242\n', 'utf8');
+    // «брошен час назад»
+    const hourAgo = new Date(Date.now() - 3_600_000);
+    utimesSync(lockPath, hourAgo, hourAgo);
+    const store = new CanvasFileStore(boardPath);
+    store.mutate((c) => createCanvasNode(c, { label: 'после протухшего', layer: 'lms' }));
+    expect(JSON.parse(readFileSync(boardPath, 'utf8')).nodes).toHaveLength(4);
+    expect(existsSync(lockPath)).toBe(false);
+  });
+
+  it('withFileLock: ошибка внутри критической секции не оставляет лок', () => {
+    const target = join(dir, 'x.canvas');
+    expect(() =>
+      withFileLock(target, () => {
+        throw new Error('boom');
+      })
+    ).toThrow(/boom/);
+    expect(existsSync(`${target}.lock`)).toBe(false);
   });
 
   it('мутация первого запуска создаёт файл', () => {

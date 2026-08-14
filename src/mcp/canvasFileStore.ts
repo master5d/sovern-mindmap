@@ -7,10 +7,30 @@
 // (сервер не знает measured-размеров) и незнакомые metadata-ключи чужих нод.
 // Правим только то, что попросили, остальные байты нод не трогаем.
 //
-// Конкурентный доступ (UI открыт параллельно, fb.mjs пишет тот же файл):
-// перечитываем файл перед КАЖДОЙ мутацией и пишем атомарно (tmp + rename),
-// чтобы поллер UI никогда не увидел недописанный JSON.
-import { readFileSync, writeFileSync, renameSync, rmSync, existsSync, mkdirSync } from 'node:fs';
+// Конкурентный доступ. Два независимых слоя, и путать их нельзя:
+//  1) ЧИТАТЕЛИ (поллер UI) — атомарная запись tmp + rename: недописанный JSON
+//     не виден никогда.
+//  2) ПИСАТЕЛИ — атомарного rename МАЛО. read-modify-write двух процессов
+//     (у каждой сессии Claude свой процесс MCP-сервера) — классическая потеря
+//     обновления: оба прочитали одну версию, второй rename затёр первого.
+//     Замерено: 10 параллельных create_node из двух процессов → 6 нод в файле.
+//     Поэтому мутация идёт под межпроцессным локом (<board>.lock, O_EXCL),
+//     и перечитывание файла происходит УЖЕ под локом.
+//  Оговорка честности: лок серализует только тех, кто его берёт (наши серверы).
+//  `fb.mjs build` в mc_hub перегенерирует board.canvas из feedback.jsonl целиком
+//  и лока не берёт — его прогон стирает ноды, созданные через MCP, by design.
+import {
+  readFileSync,
+  writeFileSync,
+  renameSync,
+  rmSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  closeSync,
+  writeSync,
+  statSync,
+} from 'node:fs';
 import { dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { JSONCanvas, JSONCanvasNode, JSONCanvasEdge } from '../types/index.js';
@@ -28,8 +48,75 @@ function assertCanvasShape(parsed: unknown, path: string): asserts parsed is JSO
   }
 }
 
+/** Сколько ждём чужой лок, прежде чем честно провалить мутацию. */
+export const LOCK_TIMEOUT_MS = 5_000;
+/** Старше этого лок считается брошенным (процесс убит, за собой не убрал). */
+export const LOCK_STALE_MS = 30_000;
+
+/** Синхронный сон: mutate() синхронна, весь стек инструментов тоже. */
+function sleepSync(ms: number): void {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+/**
+ * Межпроцессный лок на файл: `<target>.lock`, создаётся с O_EXCL (`wx`), внутри
+ * pid держателя. Занят — ждём; протух — снимаем; не дождались — БРОСАЕМ ошибку,
+ * а не пишем поверх (тихая потеря чужой правки хуже честного провала вызова).
+ */
+export function withFileLock<T>(
+  target: string,
+  fn: () => T,
+  opts: { timeoutMs?: number; staleMs?: number } = {}
+): T {
+  const timeoutMs = opts.timeoutMs ?? LOCK_TIMEOUT_MS;
+  const staleMs = opts.staleMs ?? LOCK_STALE_MS;
+  const lockPath = `${target}.lock`;
+  mkdirSync(dirname(target), { recursive: true });
+  const deadline = Date.now() + timeoutMs;
+  let fd: number;
+  for (;;) {
+    try {
+      fd = openSync(lockPath, 'wx');
+      break;
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== 'EEXIST') throw e;
+      let ageMs: number;
+      try {
+        ageMs = Date.now() - statSync(lockPath).mtimeMs;
+      } catch {
+        continue; // держатель освободил лок между open и stat — пробуем снова
+      }
+      if (ageMs > staleMs) {
+        rmSync(lockPath, { force: true }); // брошенный лок не должен держать вечно
+        continue;
+      }
+      if (Date.now() >= deadline) {
+        throw new Error(
+          `${target}: busy — held by another process (${lockPath}, ${Math.round(ageMs)}ms old); ` +
+            `mutation aborted instead of overwriting their write`
+        );
+      }
+      sleepSync(15);
+    }
+  }
+  try {
+    writeSync(fd, `${process.pid}\n`);
+    return fn();
+  } finally {
+    try {
+      closeSync(fd);
+    } finally {
+      rmSync(lockPath, { force: true });
+    }
+  }
+}
+
 export class CanvasFileStore {
-  constructor(readonly path: string) {}
+  /** lockOpts — только для тестов/тюнинга: боевые значения см. LOCK_*_MS. */
+  constructor(
+    readonly path: string,
+    private readonly lockOpts: { timeoutMs?: number; staleMs?: number } = {}
+  ) {}
 
   exists(): boolean {
     return existsSync(this.path);
@@ -49,13 +136,15 @@ export class CanvasFileStore {
     return parsed;
   }
 
-  /** Перечитать → изменить → атомарно записать. Свежий read на каждый вызов —
-   *  правки UI/fb.mjs между инструментами не перетираются нашей старой копией. */
+  /** Под локом: перечитать → изменить → атомарно записать. Read внутри лока —
+   *  иначе параллельный процесс успевает вклиниться между read и rename. */
   mutate<T>(fn: (canvas: JSONCanvas) => T): T {
-    const canvas = this.read();
-    const result = fn(canvas);
-    this.writeAtomic(canvas);
-    return result;
+    return withFileLock(this.path, () => {
+      const canvas = this.read();
+      const result = fn(canvas);
+      this.writeAtomic(canvas);
+      return result;
+    }, this.lockOpts);
   }
 
   private writeAtomic(canvas: JSONCanvas): void {
