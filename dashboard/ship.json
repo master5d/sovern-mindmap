@@ -1,0 +1,10 @@
+{
+  "name": "MindMapping",
+  "emoji": "🗺️",
+  "title": "Sovern Mindmap",
+  "tab": {
+    "mode": "embed",
+    "url": "http://localhost:1420",
+    "start_hint": "npm run dev"
+  }
+}
