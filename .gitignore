@@ -38,3 +38,12 @@ _reference/
 decks/
 # format tax: рядом лежит .md-двойник (feedback_md_first_format_tax)
 *.docx
+
+# --- секреты: канон лаборатории (аудит 2026-08-21) ---
+# Перечисление (.env / .env.local / .env.*.local) пропускает .env.bak-<stamp>,
+# .env.production и .dev.vars — в estate-hub так висел бэкап с живым ключом
+# гейтвея. Ловим семейства целиком, примеры возвращаем негацией.
+.env*
+!.env.example
+.dev.vars*
+!.dev.vars.example
