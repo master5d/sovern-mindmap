@@ -26,6 +26,14 @@ export function fbCliFor(boardPath: string): string | null {
 
 interface CacheEntry {
   mtime: number;
+  /** Размер файла на момент разбора — второй компонент ключа кэша. Один
+   *  только mtime совпадёт у файла, восстановленного из бэкапа/git checkout
+   *  с сохранённым таймстемпом: тогда кэш отдал бы заголовок от ПРОШЛОГО
+   *  содержимого. Пара (mtime, size) закрывает частый случай, но не все:
+   *  подмена с тем же mtime И тем же размером неотличима от несовпавшего
+   *  кэша — это ГРАНИЦА метода, а не баг, и она осталась непроверяемой этим
+   *  кэшем в принципе (см. тест «то же mtime и тот же размер»). */
+  size: number;
   name: string;
   error?: string;
 }
@@ -55,30 +63,49 @@ export function readBoardIndex(paths: string[]): BoardSource[] {
     const path = normalizeBoardPath(raw);
     const id = boardSourceId(path);
     const fallback = basename(path).replace(/\.canvas$/i, '');
-    const writable = fbCliFor(path) !== null;
+    // «Можно писать» подразумевает, что борд СУЩЕСТВУЕТ и прочитался: писать
+    // в путь с error (файл недоступен/не читается/не Canvas) предлагать
+    // нельзя, даже если рядом honestly лежит scripts/fb.mjs. Поэтому writable
+    // считается true только в самом конце, после всех проверок отказа —
+    // ниже он либо возвращается как false вместе с error, либо
+    // переопределяется пробой fbCliFor на успешной ветке.
+    const canWrite = fbCliFor(path) !== null;
 
-    let mtime = 0;
+    let stat: { mtimeMs: number; size: number };
     try {
-      mtime = statSync(path).mtimeMs;
+      stat = statSync(path);
     } catch (e) {
-      return { id, name: fallback, path, writable, mtime: 0, error: `файл недоступен: ${(e as Error).message}` };
+      return { id, name: fallback, path, writable: false, mtime: 0, error: `файл недоступен: ${(e as Error).message}` };
     }
+    const { mtimeMs: mtime, size } = stat;
 
-    // Разбор ради имени кэшируется по (path, mtime): иначе «клиент не тянет
-    // файлы целиком» превратилось бы в «их целиком тянет сервер на каждый тик».
+    // Разбор ради имени кэшируется по (path, mtime, size): иначе «клиент не
+    // тянет файлы целиком» превратилось бы в «их целиком тянет сервер на
+    // каждый тик». Только mtime было бы недостаточно — см. комментарий у
+    // CacheEntry.size.
     const hit = nameCache.get(path);
-    if (hit && hit.mtime === mtime) {
-      return { id, name: hit.name, path, writable, mtime, ...(hit.error ? { error: hit.error } : {}) };
+    if (hit && hit.mtime === mtime && hit.size === size) {
+      // Запись из кэша, включая error: если файл был битым в прошлый раз и
+      // с тех пор не менялся (mtime и size те же) — он всё ещё битый, а не
+      // «внезапно прочитался».
+      return {
+        id,
+        name: hit.name,
+        path,
+        writable: hit.error ? false : canWrite,
+        mtime,
+        ...(hit.error ? { error: hit.error } : {}),
+      };
     }
 
     let text: string;
     try {
       text = readFileSync(path, 'utf8');
     } catch (e) {
-      return { id, name: fallback, path, writable, mtime, error: `файл не читается: ${(e as Error).message}` };
+      return { id, name: fallback, path, writable: false, mtime, error: `файл не читается: ${(e as Error).message}` };
     }
     const { name, error } = titleFrom(text, fallback);
-    nameCache.set(path, { mtime, name, error });
-    return { id, name, path, writable, mtime, ...(error ? { error } : {}) };
+    nameCache.set(path, { mtime, size, name, error });
+    return { id, name, path, writable: error ? false : canWrite, mtime, ...(error ? { error } : {}) };
   });
 }

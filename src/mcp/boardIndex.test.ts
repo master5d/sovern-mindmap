@@ -50,6 +50,28 @@ describe('readBoardIndex', () => {
     expect(r[1].name).toBe('good');
   });
 
+  it('пропавший файл — writable === false, даже если рядом лежит scripts/fb.mjs', () => {
+    // «Можно писать» подразумевает, что борд существует. Проба fbCliFor
+    // смотрит только на файловую систему рядом с путём и не знает, что
+    // самого борда нет — это обязана перекрыть readBoardIndex.
+    mkdirSync(join(dir, 'scripts'), { recursive: true });
+    writeFileSync(join(dir, 'scripts', 'fb.mjs'), '// cli', 'utf8');
+    const ghost = join(dir, 'ghost.canvas');
+    const r = readBoardIndex([ghost])[0];
+    expect(r.error).toBeTruthy();
+    expect(r.writable).toBe(false);
+  });
+
+  it('битый JSON рядом с scripts/fb.mjs — тоже writable === false', () => {
+    mkdirSync(join(dir, 'scripts'), { recursive: true });
+    writeFileSync(join(dir, 'scripts', 'fb.mjs'), '// cli', 'utf8');
+    const p = join(dir, 'broken-writable.canvas');
+    writeFileSync(p, '{ это не json', 'utf8');
+    const r = readBoardIndex([p])[0];
+    expect(r.error).toBeTruthy();
+    expect(r.writable).toBe(false);
+  });
+
   it('битый JSON — это error, а не пустой борд', () => {
     const p = join(dir, 'broken.canvas');
     writeFileSync(p, '{ это не json', 'utf8');
@@ -107,5 +129,60 @@ describe('readBoardIndex', () => {
     const later = new Date(Date.now() + 10_000);
     utimesSync(p, later, later);
     expect(readBoardIndex([p])[0].name).toBe('Второе');
+  });
+
+  it('та же mtime И тот же размер — кэш побеждает: это ГРАНИЦА метода, а не баг', () => {
+    // «Первое» и «Второе» — оба 66 байт в UTF-8 (проверено node -e перед
+    // написанием теста). Совпадение и штампа, и размера при разном
+    // содержимом — редкий, но реальный случай, который (mtime, size) не
+    // ловит по определению. Тест называет эту границу явно, а не молчит.
+    const p = join(dir, 'a.canvas');
+    writeFileSync(p, board([], { 'desops:title': 'Первое' }), 'utf8');
+    const stamp = new Date(Date.now() - 20_000);
+    utimesSync(p, stamp, stamp);
+    expect(readBoardIndex([p])[0].name).toBe('Первое');
+
+    const b2 = board([], { 'desops:title': 'Второе' });
+    expect(Buffer.byteLength(b2, 'utf8')).toBe(66);
+    writeFileSync(p, b2, 'utf8');
+    utimesSync(p, stamp, stamp);
+    // Кэш не видит разницы: и mtime, и size совпали с прошлым разбором.
+    expect(readBoardIndex([p])[0].name).toBe('Первое');
+  });
+
+  it('та же mtime, но ДРУГОЙ размер — кэш промахивается, имя перечитывается', () => {
+    const p = join(dir, 'a.canvas');
+    writeFileSync(p, board([], { 'desops:title': 'Первое' }), 'utf8');
+    const stamp = new Date(Date.now() - 30_000);
+    utimesSync(p, stamp, stamp);
+    expect(readBoardIndex([p])[0].name).toBe('Первое');
+
+    // Заведомо другая длина заголовка при том же mtime.
+    const longTitle = 'Совсем другой и заметно более длинный заголовок';
+    const longer = board([], { 'desops:title': longTitle });
+    expect(Buffer.byteLength(longer, 'utf8')).not.toBe(66);
+    writeFileSync(p, longer, 'utf8');
+    utimesSync(p, stamp, stamp);
+    expect(readBoardIndex([p])[0].name).toBe(longTitle);
+  });
+
+  it('error в кэше отдаётся при повторном чтении того же битого файла с неизменным mtime', () => {
+    // Круг «положить error в кэш» / «достать error из кэша» — если снять
+    // возврат error на попадании в кэш, второй читатель того же битого
+    // файла молча получит «прочитал пустое» вместо «не смог прочитать».
+    const p = join(dir, 'broken-cached.canvas');
+    writeFileSync(p, '{ это не json', 'utf8');
+    const stamp = new Date(Date.now() - 40_000);
+    utimesSync(p, stamp, stamp);
+
+    const first = readBoardIndex([p])[0];
+    expect(first.error).toBeTruthy();
+    expect(first.name).toBe('broken-cached');
+
+    // Второе чтение того же пути: mtime и size не менялись — ответ идёт из
+    // кэша, но error обязан присутствовать оба раза.
+    const second = readBoardIndex([p])[0];
+    expect(second.error).toBeTruthy();
+    expect(second.name).toBe('broken-cached');
   });
 });
