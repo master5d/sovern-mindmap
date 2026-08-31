@@ -14,11 +14,21 @@ export function normalizeBoardPath(p: string): string {
   return slashed.replace(/^([a-z]):/, (_m, d: string) => `${d.toUpperCase()}:`);
 }
 
+/** Ключ СРАВНЕНИЯ пути. Отдельно от normalizeBoardPath, потому что тот отвечает
+ *  за отображаемый вид, а этот — за тождество: на Windows ФС регистронезависима,
+ *  и `C:/Boards/a.canvas` с `c:/BOARDS/A.CANVAS` — один и тот же файл. Тот же
+ *  приём, что в pathContainment.ts (isUnder). */
+export function boardPathKey(p: string): string {
+  return normalizeBoardPath(p).toLowerCase();
+}
+
 /** Идентификатор борда — хеш ПУТИ, а не позиция в списке.
  *  Индекс сдвинется при вставке борда в середину, и содержимое вкладок молча
- *  поменяется местами. */
+ *  поменяется местами. Хешируем ключ сравнения (регистронезависимый), а не
+ *  отображаемый вид — иначе один и тот же файл под разным регистром получит
+ *  два разных id. */
 export function boardSourceId(p: string): string {
-  return createHash('sha1').update(normalizeBoardPath(p)).digest('hex').slice(0, 12);
+  return createHash('sha1').update(boardPathKey(p)).digest('hex').slice(0, 12);
 }
 
 function isDirectory(p: string): boolean {
@@ -32,10 +42,17 @@ function isDirectory(p: string): boolean {
 /** Каталог -> его *.canvas по имени. Без рекурсии: рекурсивный обход втянул бы
  *  node_modules и чужие артефакты. */
 function expandDirectory(p: string): string[] {
-  return readdirSync(p)
-    .filter((f) => f.toLowerCase().endsWith('.canvas'))
-    .sort((a, b) => a.localeCompare(b))
-    .map((f) => normalizeBoardPath(join(p, f)));
+  try {
+    return readdirSync(p)
+      .filter((f) => f.toLowerCase().endsWith('.canvas'))
+      .sort((a, b) => a.localeCompare(b))
+      .map((f) => normalizeBoardPath(join(p, f)));
+  } catch {
+    // Каталог прошёл statSync().isDirectory(), но стал нечитаем между stat и
+    // readdir (EACCES, гонка с удалением) — не роняем весь резолв, оставляем
+    // элемент ПУТЁМ в списке: о недоступности скажет индекс бордов, а не авария.
+    return [normalizeBoardPath(p)];
+  }
 }
 
 export function resolveBoardPaths(env: NodeJS.ProcessEnv = process.env): {
@@ -60,15 +77,31 @@ export function resolveBoardPaths(env: NodeJS.ProcessEnv = process.env): {
 
   const paths: string[] = [];
   const seen = new Set<string>();
+  // Каталоги, развернувшиеся в ноль *.canvas: несуществующий файл остаётся в
+  // paths и про него молчание неуместно, а вот пустой каталог бесследно
+  // исчезает из paths — асимметрия, которую фиксируем в note.
+  const emptyDirs: string[] = [];
   for (const entry of entries) {
     // Несуществующий путь НЕ выбрасывается: про него скажет индекс отдельной
     // записью с причиной. Молча выпавший борд читался бы как «его и не было».
-    const expanded = isDirectory(entry) ? expandDirectory(entry) : [normalizeBoardPath(entry)];
+    const entryIsDir = isDirectory(entry);
+    const expanded = entryIsDir ? expandDirectory(entry) : [normalizeBoardPath(entry)];
+    if (entryIsDir && expanded.length === 0) {
+      emptyDirs.push(normalizeBoardPath(entry));
+      continue;
+    }
     for (const p of expanded) {
-      if (seen.has(p)) continue;
-      seen.add(p);
+      const key = boardPathKey(p);
+      if (seen.has(key)) continue;
+      seen.add(key);
       paths.push(p);
     }
   }
+
+  if (emptyDirs.length > 0) {
+    const emptyNote = `каталог без *.canvas: ${emptyDirs.join(', ')}`;
+    note = note ? `${note}; ${emptyNote}` : emptyNote;
+  }
+
   return { paths, note };
 }
