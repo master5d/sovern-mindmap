@@ -220,7 +220,7 @@ describe('temporal isolation', () => {
 describe('syncFileBoards: вкладка на живой борд', () => {
   beforeEach(() => {
     localStorage.clear();
-    useWorkflowStore.setState({ boards: [], activeBoardId: null });
+    useWorkflowStore.setState({ boards: [], activeBoardId: '' });
   });
 
   it('заводит по вкладке на каждый борд и помнит sourceId', () => {
@@ -302,7 +302,7 @@ describe('syncFileBoards: вкладка на живой борд', () => {
 
     const afterSync = useWorkflowStore.getState();
     expect(afterSync.boards.some((b) => b.id === afterSync.activeBoardId)).toBe(
-      afterSync.activeBoardId !== null,
+      afterSync.activeBoardId !== '',
     );
 
     // switchBoard(next) внутри syncFileBoards запущен fire-and-forget —
@@ -315,7 +315,7 @@ describe('syncFileBoards: вкладка на живой борд', () => {
     expect(settled.nodes.some((n) => n.data.label === 'ПРИЗРАК БОРДА A')).toBe(false);
   });
 
-  it('бордов не осталось вовсе — activeBoardId уходит в null, switchBoard не зовётся', async () => {
+  it("бордов не осталось вовсе — activeBoardId уходит в '', switchBoard не зовётся", async () => {
     const s = useWorkflowStore.getState();
     s.syncFileBoards([{ id: 'aaa', name: 'A' }]);
     const idOfA = useWorkflowStore.getState().boards.find((b) => b.sourceId === 'aaa')!.id;
@@ -326,6 +326,6 @@ describe('syncFileBoards: вкладка на живой борд', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     const st = useWorkflowStore.getState();
     expect(st.boards).toHaveLength(0);
-    expect(st.activeBoardId).toBeNull();
+    expect(st.activeBoardId).toBe('');
   });
 });

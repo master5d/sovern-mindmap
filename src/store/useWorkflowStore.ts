@@ -117,7 +117,7 @@ interface WorkflowState {
   addImportedGraph: (newNodes: Node<SOVERNNodeData>[], newEdges: Edge[]) => void;
   // ── Canvas Project Tabs (multi-board) — non-temporal fields ──
   boards: BoardMeta[];
-  activeBoardId: string | null;
+  activeBoardId: string;
   initBoards: (reg: { boards: BoardMeta[]; activeBoardId: string }) => void;
   switchBoard: (id: string) => Promise<void>;
   createBoard: (name?: string) => Promise<string>;
@@ -537,13 +537,14 @@ export const useWorkflowStore = create<WorkflowState>()(
     // activeBoardId не имеет права указывать на снесённую вкладку. Присвоить
     // ей id выжившего борда напрямую НЕЛЬЗЯ: контент грузится только внутри
     // switchBoard, а useAutosave сохранит граф исчезнувшего борда под чужим
-    // ключом. Поэтому — null вместе со списком (switchBoard тогда пропустит
-    // сохранение исчезнувшего файлового борда) и штатный переход отдельным
-    // вызовом.
+    // ключом. Поэтому — '' вместе со списком (тот же часовой, что и в
+    // switchBoard: `if (activeBoardId && ...)` — пустая строка ложна ровно
+    // так же, как null, поэтому switchBoard пропустит сохранение
+    // исчезнувшего файлового борда) и штатный переход отдельным вызовом.
     if (get().activeBoardId && !boards.some((b) => b.id === get().activeBoardId)) {
-      const next = boards[0]?.id ?? null;
-      set({ boards, activeBoardId: null });
-      void saveBoardsRegistry({ boards, activeBoardId: null });
+      const next = boards[0]?.id ?? '';
+      set({ boards, activeBoardId: '' });
+      void saveBoardsRegistry({ boards, activeBoardId: '' });
       if (next) void get().switchBoard(next);
       return;
     }
