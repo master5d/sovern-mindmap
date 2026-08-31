@@ -34,7 +34,7 @@ import {
 import { dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { JSONCanvas, JSONCanvasNode, JSONCanvasEdge } from '../types/index.js';
-import { resolveBoardPaths, DEFAULT_BOARD_PATH } from './boardSources';
+import { resolveBoardPaths, normalizeBoardPath, DEFAULT_BOARD_PATH } from './boardSources';
 import { readBoardIndex } from './boardIndex';
 
 // Константа больше не живёт здесь второй копией: единственное объявление —
@@ -46,18 +46,47 @@ export { DEFAULT_BOARD_PATH } from './boardSources';
  *  который следующая пересборка перезапишет. */
 export function resolveBoardPath(): string {
   const single = process.env.SOVERN_BOARD?.trim();
-  if (single && !process.env.SOVERN_BOARDS?.trim()) return single;
+  const many = process.env.SOVERN_BOARDS?.trim();
+  // Обе переменные заданы — список выигрывает (см. resolveBoardPaths), и
+  // здесь мы обязаны ТОЖЕ уйти в ветку списка: иначе SOVERN_BOARD, указывающий
+  // на производный борд без fb.mjs, был бы возвращён в обход выбора writable.
+  if (single && !many) {
+    // normalizeBoardPath — не только для красоты вывода: следующая задача
+    // переводит дев-сервер на resolveBoardPaths/readBoardIndex, которые
+    // нормализуют ВСЕГДА, и без нормализации здесь два модуля посчитали бы
+    // разные boardSourceId для одного и того же борда.
+    return normalizeBoardPath(single);
+  }
 
-  const { paths } = resolveBoardPaths();
+  const { paths, note } = resolveBoardPaths();
+  if (note) {
+    // Диагностика resolveBoardPaths (обе переменные заданы, каталог без
+    // *.canvas) иначе долетает только до дев-сервера — в процессе MCP она
+    // терялась бы бесследно.
+    console.warn(`[SOVERN] ${note}`);
+  }
   const index = readBoardIndex(paths);
   const writable = index.find((b) => b.writable);
   if (writable) return writable.path;
 
+  // Пишущего нет. Среди читаемых бордов берём первый — а не позиционно
+  // первый вообще: борд с error всё равно уронит mutate() с «unreadable
+  // JSON Canvas», и оператор, увидевший «нет ни одного пишущего», пойдёт
+  // искать отсутствующий fb.mjs — не ту причину.
+  const readable = index.find((b) => !b.error);
+  if (readable) {
+    console.warn(
+      `[SOVERN] среди живых бордов нет ни одного пишущего (нет scripts/fb.mjs рядом); беру первый читаемый: ${readable.path}`,
+    );
+    return readable.path;
+  }
+
   const first = index[0];
-  // Тихий выбор здесь означал бы, что артефакты уедут в борд, который их
-  // потеряет при следующей пересборке.
+  // Все борды битые — фолбэку буквально не из чего выбирать читаемый путь.
+  // Называем причину ПЕРВОГО борда, чтобы оператор не искал fb.mjs там, где
+  // проблема на самом деле в самом файле.
   console.warn(
-    `[SOVERN] среди живых бордов нет ни одного пишущего (нет scripts/fb.mjs рядом); беру первый: ${first?.path ?? DEFAULT_BOARD_PATH}`,
+    `[SOVERN] среди живых бордов нет ни одного пишущего, и выбранный борд не читается: ${first?.error ?? 'нет бордов'} (${first?.path ?? DEFAULT_BOARD_PATH})`,
   );
   return first?.path ?? DEFAULT_BOARD_PATH;
 }
