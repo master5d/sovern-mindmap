@@ -33,6 +33,15 @@ export interface BoardMeta {
   id: string;
   name: string;
   kind: 'user' | 'review' | 'file';
+  /** Идентификатор живого борда из /api/boards. Есть только у kind === 'file'.
+   *  Хеш пути, а не позиция: вставка борда в середину списка не должна
+   *  переставлять вкладки местами. */
+  sourceId?: string;
+  /** Можно ли писать в этот борд (рядом лежит scripts/fb.mjs). */
+  writable?: boolean;
+  /** Причина, по которой борд не прочитан. Присутствие поля = «не смог
+   *  прочитать»; пустой холст в этом случае соврал бы, что борд пуст. */
+  sourceError?: string;
 }
 
 export const REVIEW_BOARD_NAME = 'Design Review';
@@ -108,7 +117,7 @@ interface WorkflowState {
   addImportedGraph: (newNodes: Node<SOVERNNodeData>[], newEdges: Edge[]) => void;
   // ── Canvas Project Tabs (multi-board) — non-temporal fields ──
   boards: BoardMeta[];
-  activeBoardId: string;
+  activeBoardId: string | null;
   initBoards: (reg: { boards: BoardMeta[]; activeBoardId: string }) => void;
   switchBoard: (id: string) => Promise<void>;
   createBoard: (name?: string) => Promise<string>;
@@ -116,6 +125,7 @@ interface WorkflowState {
   deleteBoard: (id: string) => Promise<void>;
   ensureReviewBoard: () => string;
   ensureFileBoard: () => string;
+  syncFileBoards: (sources: { id: string; name: string; writable?: boolean; error?: string }[]) => void;
 }
 
 /**
@@ -481,6 +491,65 @@ export const useWorkflowStore = create<WorkflowState>()(
     set({ boards });
     void saveBoardsRegistry({ boards, activeBoardId: get().activeBoardId });
     return id;
+  },
+  syncFileBoards: (sources) => {
+    const prev = get().boards;
+    const wanted = new Map(sources.map((s) => [s.id, s]));
+
+    /** Поля живого борда переносятся ЦЕЛИКОМ, включая отсутствие error:
+     *  починившийся борд не должен носить прежнюю ошибку вечно. */
+    const meta = (b: BoardMeta, s: { name: string; writable?: boolean; error?: string }) => {
+      const next: BoardMeta = { ...b, name: s.name, writable: s.writable ?? false };
+      delete next.sourceError;
+      if (s.error) next.sourceError = s.error;
+      return next;
+    };
+
+    // Пользовательские и review-вкладки живут своей жизнью: список живых
+    // бордов не имеет права их трогать.
+    const kept = prev.filter((b) => b.kind !== 'file' || wanted.has(b.sourceId ?? ''));
+    const renamed = kept.map((b) =>
+      b.kind === 'file' && b.sourceId && wanted.has(b.sourceId)
+        ? meta(b, wanted.get(b.sourceId)!)
+        : b,
+    );
+    const present = new Set(renamed.filter((b) => b.kind === 'file').map((b) => b.sourceId));
+    const added: BoardMeta[] = sources
+      .filter((s) => !present.has(s.id))
+      .map((s) =>
+        meta(
+          { id: `b-${crypto.randomUUID()}`, name: s.name, kind: 'file', sourceId: s.id },
+          s,
+        ),
+      );
+
+    const boards = [...renamed, ...added];
+    if (boards.length === prev.length && added.length === 0) {
+      const same = boards.every(
+        (b, i) =>
+          b.name === prev[i].name &&
+          b.writable === prev[i].writable &&
+          b.sourceError === prev[i].sourceError,
+      );
+      if (same) return; // ничего не изменилось — не дёргаем подписчиков
+    }
+
+    // activeBoardId не имеет права указывать на снесённую вкладку. Присвоить
+    // ей id выжившего борда напрямую НЕЛЬЗЯ: контент грузится только внутри
+    // switchBoard, а useAutosave сохранит граф исчезнувшего борда под чужим
+    // ключом. Поэтому — null вместе со списком (switchBoard тогда пропустит
+    // сохранение исчезнувшего файлового борда) и штатный переход отдельным
+    // вызовом.
+    if (get().activeBoardId && !boards.some((b) => b.id === get().activeBoardId)) {
+      const next = boards[0]?.id ?? null;
+      set({ boards, activeBoardId: null });
+      void saveBoardsRegistry({ boards, activeBoardId: null });
+      if (next) void get().switchBoard(next);
+      return;
+    }
+
+    set({ boards });
+    void saveBoardsRegistry({ boards, activeBoardId: get().activeBoardId });
   },
     }),
     {

@@ -216,3 +216,116 @@ describe('temporal isolation', () => {
     expect(useWorkflowStore.temporal.getState().pastStates.length).toBe(0);
   });
 });
+
+describe('syncFileBoards: вкладка на живой борд', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    useWorkflowStore.setState({ boards: [], activeBoardId: null });
+  });
+
+  it('заводит по вкладке на каждый борд и помнит sourceId', () => {
+    useWorkflowStore.getState().syncFileBoards([
+      { id: 'aaa', name: 'Флот и ярусы' },
+      { id: 'bbb', name: 'Потоки данных' },
+    ]);
+    const file = useWorkflowStore.getState().boards.filter((b) => b.kind === 'file');
+    expect(file.map((b) => b.sourceId)).toEqual(['aaa', 'bbb']);
+    expect(file.map((b) => b.name)).toEqual(['Флот и ярусы', 'Потоки данных']);
+  });
+
+  it('повторный вызов не плодит дублей и обновляет имя', () => {
+    const s = useWorkflowStore.getState();
+    s.syncFileBoards([{ id: 'aaa', name: 'Старое' }]);
+    s.syncFileBoards([{ id: 'aaa', name: 'Новое' }]);
+    const file = useWorkflowStore.getState().boards.filter((b) => b.kind === 'file');
+    expect(file).toHaveLength(1);
+    expect(file[0].name).toBe('Новое');
+  });
+
+  it('исчезнувший борд убирает свою вкладку, а пользовательские не трогает', () => {
+    const s = useWorkflowStore.getState();
+    s.createBoard('Моя доска');
+    s.syncFileBoards([{ id: 'aaa', name: 'A' }, { id: 'bbb', name: 'B' }]);
+    s.syncFileBoards([{ id: 'bbb', name: 'B' }]);
+    const boards = useWorkflowStore.getState().boards;
+    expect(boards.filter((b) => b.kind === 'file').map((b) => b.sourceId)).toEqual(['bbb']);
+    expect(boards.some((b) => b.name === 'Моя доска')).toBe(true);
+  });
+
+  it('вставка борда в СЕРЕДИНУ не переставляет существующие вкладки', () => {
+    // Ради этого id — хеш пути, а не индекс.
+    const s = useWorkflowStore.getState();
+    s.syncFileBoards([{ id: 'aaa', name: 'A' }, { id: 'ccc', name: 'C' }]);
+    const idOfA = useWorkflowStore.getState().boards.find((b) => b.sourceId === 'aaa')!.id;
+    s.syncFileBoards([
+      { id: 'aaa', name: 'A' },
+      { id: 'bbb', name: 'B' },
+      { id: 'ccc', name: 'C' },
+    ]);
+    expect(useWorkflowStore.getState().boards.find((b) => b.sourceId === 'aaa')!.id).toBe(idOfA);
+  });
+
+  it('переносит writable и error на вкладку — их показывает интерфейс', () => {
+    useWorkflowStore.getState().syncFileBoards([
+      { id: 'aaa', name: 'Обратная связь', writable: true },
+      { id: 'bbb', name: 'ghost', error: 'файл недоступен' },
+    ]);
+    const file = useWorkflowStore.getState().boards.filter((b) => b.kind === 'file');
+    expect(file[0].writable).toBe(true);
+    expect(file[0].sourceError).toBeUndefined();
+    expect(file[1].writable).toBeFalsy();
+    expect(file[1].sourceError).toBe('файл недоступен');
+  });
+
+  it('починившийся борд теряет sourceError, а не носит его вечно', () => {
+    const s = useWorkflowStore.getState();
+    s.syncFileBoards([{ id: 'aaa', name: 'A', error: 'файл недоступен' }]);
+    s.syncFileBoards([{ id: 'aaa', name: 'A' }]);
+    const file = useWorkflowStore.getState().boards.find((b) => b.sourceId === 'aaa')!;
+    expect(file.sourceError).toBeUndefined();
+  });
+
+  it('активная вкладка исчезнувшего борда не оставляет activeBoardId в никуда и не переносит её контент на новую активную доску', async () => {
+    const s = useWorkflowStore.getState();
+    s.syncFileBoards([{ id: 'aaa', name: 'A' }, { id: 'bbb', name: 'B' }]);
+    const idOfA = useWorkflowStore.getState().boards.find((b) => b.sourceId === 'aaa')!.id;
+    // Узел-маркер: если contentActive-борда переживёт исчезновение вкладки и
+    // осядет на новой активной доске — это порча чужого контента, ровно тот
+    // класс бага, который защита в useBoardSync призвана предотвращать.
+    useWorkflowStore.setState({
+      activeBoardId: idOfA,
+      nodes: [node('ghost-a', 'ПРИЗРАК БОРДА A')],
+      edges: [],
+    });
+
+    s.syncFileBoards([{ id: 'bbb', name: 'B' }]); // 'aaa' исчез, был активным
+
+    const afterSync = useWorkflowStore.getState();
+    expect(afterSync.boards.some((b) => b.id === afterSync.activeBoardId)).toBe(
+      afterSync.activeBoardId !== null,
+    );
+
+    // switchBoard(next) внутри syncFileBoards запущен fire-and-forget —
+    // дождаться, пока он осядет, прежде чем судить о содержимом графа.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const settled = useWorkflowStore.getState();
+    const idOfB = settled.boards.find((b) => b.sourceId === 'bbb')!.id;
+    expect(settled.activeBoardId).toBe(idOfB);
+    expect(settled.nodes.some((n) => n.data.label === 'ПРИЗРАК БОРДА A')).toBe(false);
+  });
+
+  it('бордов не осталось вовсе — activeBoardId уходит в null, switchBoard не зовётся', async () => {
+    const s = useWorkflowStore.getState();
+    s.syncFileBoards([{ id: 'aaa', name: 'A' }]);
+    const idOfA = useWorkflowStore.getState().boards.find((b) => b.sourceId === 'aaa')!.id;
+    useWorkflowStore.setState({ activeBoardId: idOfA });
+
+    s.syncFileBoards([]);
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const st = useWorkflowStore.getState();
+    expect(st.boards).toHaveLength(0);
+    expect(st.activeBoardId).toBeNull();
+  });
+});
