@@ -34,11 +34,32 @@ import {
 import { dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { JSONCanvas, JSONCanvasNode, JSONCanvasEdge } from '../types/index.js';
+import { resolveBoardPaths, DEFAULT_BOARD_PATH } from './boardSources';
+import { readBoardIndex } from './boardIndex';
 
-export const DEFAULT_BOARD_PATH = 'C:/telo/Efforts/Ongoing/mc_hub/feedback/board.canvas';
+// Константа больше не живёт здесь второй копией: единственное объявление —
+// в boardSources, откуда её читают и конфиг, и этот модуль.
+export { DEFAULT_BOARD_PATH } from './boardSources';
 
+/** Куда пишет MCP. Живых бордов может быть много, но ПИШУЩАЯ полоса одна:
+ *  артефакты дизайн-ревью обязаны ехать в неё, а не в производный борд,
+ *  который следующая пересборка перезапишет. */
 export function resolveBoardPath(): string {
-  return process.env.SOVERN_BOARD ?? DEFAULT_BOARD_PATH;
+  const single = process.env.SOVERN_BOARD?.trim();
+  if (single && !process.env.SOVERN_BOARDS?.trim()) return single;
+
+  const { paths } = resolveBoardPaths();
+  const index = readBoardIndex(paths);
+  const writable = index.find((b) => b.writable);
+  if (writable) return writable.path;
+
+  const first = index[0];
+  // Тихий выбор здесь означал бы, что артефакты уедут в борд, который их
+  // потеряет при следующей пересборке.
+  console.warn(
+    `[SOVERN] среди живых бордов нет ни одного пишущего (нет scripts/fb.mjs рядом); беру первый: ${first?.path ?? DEFAULT_BOARD_PATH}`,
+  );
+  return first?.path ?? DEFAULT_BOARD_PATH;
 }
 
 function assertCanvasShape(parsed: unknown, path: string): asserts parsed is JSONCanvas {

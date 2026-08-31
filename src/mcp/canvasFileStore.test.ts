@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   mkdtempSync,
+  mkdirSync,
   rmSync,
   readFileSync,
   writeFileSync,
@@ -20,6 +21,7 @@ import {
   calculateCanvasRollup,
   withFileLock,
 } from './canvasFileStore';
+import { normalizeBoardPath } from './boardSources';
 import type { JSONCanvas } from '../types/index';
 
 // Фикстура повторяет реальный формат board.canvas владельца (fb.mjs build):
@@ -88,19 +90,61 @@ afterEach(() => {
 const writeFixture = () =>
   writeFileSync(boardPath, JSON.stringify(ownerFixture, null, 2) + '\n', 'utf8');
 
-describe('resolveBoardPath', () => {
-  it('честит env SOVERN_BOARD, иначе дефолт совпадает с vite.config.ts', () => {
-    const prev = process.env.SOVERN_BOARD;
-    try {
-      process.env.SOVERN_BOARD = 'X:/somewhere/b.canvas';
-      expect(resolveBoardPath()).toBe('X:/somewhere/b.canvas');
-      delete process.env.SOVERN_BOARD;
-      expect(resolveBoardPath()).toBe(DEFAULT_BOARD_PATH);
-      expect(DEFAULT_BOARD_PATH).toBe('C:/telo/Efforts/Ongoing/mc_hub/feedback/board.canvas');
-    } finally {
-      if (prev === undefined) delete process.env.SOVERN_BOARD;
-      else process.env.SOVERN_BOARD = prev;
-    }
+describe('resolveBoardPath: MCP пишет в ЕДИНСТВЕННУЮ пишущую полосу', () => {
+  const prevOne = process.env.SOVERN_BOARD;
+  const prevMany = process.env.SOVERN_BOARDS;
+  let tmp: string;
+
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), 'resolve-board-'));
+  });
+  afterEach(() => {
+    if (prevOne === undefined) delete process.env.SOVERN_BOARD;
+    else process.env.SOVERN_BOARD = prevOne;
+    if (prevMany === undefined) delete process.env.SOVERN_BOARDS;
+    else process.env.SOVERN_BOARDS = prevMany;
+    rmSync(tmp, { recursive: true, force: true });
+  });
+
+  it('SOVERN_BOARD чтится как и раньше', () => {
+    delete process.env.SOVERN_BOARDS;
+    process.env.SOVERN_BOARD = 'X:/somewhere/b.canvas';
+    expect(resolveBoardPath()).toBe('X:/somewhere/b.canvas');
+  });
+
+  it('без переменных — прежний дефолт', () => {
+    delete process.env.SOVERN_BOARD;
+    delete process.env.SOVERN_BOARDS;
+    expect(resolveBoardPath()).toBe(DEFAULT_BOARD_PATH);
+  });
+
+  it('из списка выбирается WRITABLE борд, а не первый попавшийся', () => {
+    // Артефакты дизайн-ревью обязаны ехать в полосу обратной связи, а не в
+    // производный борд, который следующая пересборка перезапишет.
+    const derived = join(tmp, 'dataflow.canvas');
+    writeFileSync(derived, '{"nodes":[],"edges":[]}', 'utf8');
+    const feedback = join(tmp, 'feedback');
+    mkdirSync(join(feedback, 'scripts'), { recursive: true });
+    const live = join(feedback, 'board.canvas');
+    writeFileSync(live, '{"nodes":[],"edges":[]}', 'utf8');
+    writeFileSync(join(feedback, 'scripts', 'fb.mjs'), '// cli', 'utf8');
+
+    delete process.env.SOVERN_BOARD;
+    process.env.SOVERN_BOARDS = `${derived};${live}`;
+    expect(resolveBoardPath()).toBe(normalizeBoardPath(live));
+  });
+
+  it('в списке нет ни одного writable — берётся первый, но это НЕ молча', () => {
+    const a = join(tmp, 'a.canvas');
+    const b = join(tmp, 'b.canvas');
+    writeFileSync(a, '{"nodes":[],"edges":[]}', 'utf8');
+    writeFileSync(b, '{"nodes":[],"edges":[]}', 'utf8');
+    delete process.env.SOVERN_BOARD;
+    process.env.SOVERN_BOARDS = `${a};${b}`;
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(resolveBoardPath()).toBe(normalizeBoardPath(a));
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 });
 
