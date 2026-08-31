@@ -60,9 +60,14 @@ const serveBoard = (): Plugin => ({
     // разбирался в пустую строку, ответ был 404 не из этого блока).
     server.middlewares.use('/board.canvas', (_req, res) => {
       const first = BOARD_PATHS[0];
-      if (!first || !existsSync(first)) {
+      if (!first) {
         res.statusCode = 404;
-        res.end('board.canvas not found at ' + first);
+        res.end('живых бордов нет: список пуст');
+        return;
+      }
+      if (!existsSync(first)) {
+        res.statusCode = 404;
+        res.end('борд не найден на диске: ' + first);
         return;
       }
       res.setHeader('Content-Type', 'application/json');
@@ -73,6 +78,11 @@ const serveBoard = (): Plugin => ({
     // GET /board/<id>.canvas — содержимое одного борда по устойчивому id.
     server.middlewares.use('/board/', (req, res) => {
       const id = String(req.url ?? '').replace(/^\//, '').replace(/\.canvas$/, '').split('?')[0];
+      if (!id) {
+        res.statusCode = 404;
+        res.end('id борда не указан: ожидался /board/<id>.canvas');
+        return;
+      }
       const found = readBoardIndex(BOARD_PATHS).find((b) => b.id === id);
       if (!found) {
         res.statusCode = 404;
@@ -113,14 +123,28 @@ const serveBoard = (): Plugin => ({
             res.end(JSON.stringify({ ok: false, error: `борд ${boardId} не значится среди живых` }));
             return;
           }
-          const cli = fbCliFor(target.path);
-          if (!cli) {
-            // Без этой проверки перетаскивание карточки на ПРОИЗВОДНОМ борде
-            // ушло бы в fb.mjs от mc_hub с идентификатором, которого там нет.
+          // Индекс уже посчитал writable (false для производных и для бордов
+          // с error — readBoardIndex гарантирует это как инвариант). Спрашиваем
+          // ИМЕННО его, а не заново гадаем по fbCliFor — иначе /api/boards и
+          // эта ручка отвечали бы на «можно ли сюда писать» по-разному, и
+          // борд с битым board.canvas писался бы, хотя индекс сказал false.
+          if (!target.writable) {
             res.statusCode = 400;
             res.end(JSON.stringify({
               ok: false,
-              error: `борд «${target.name}» производный: править его нечем, рядом нет scripts/fb.mjs`,
+              error: `борд «${target.name}» производный или нечитаемый: писать в него нечем`,
+            }));
+            return;
+          }
+          // Вторая, отдельная проверка — гонка «скрипт исчез между индексацией
+          // и вызовом» (writable мог быть true секунду назад). Не сливать с
+          // проверкой выше: разные причины отказа, разное действие оператора.
+          const cli = fbCliFor(target.path);
+          if (!cli) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({
+              ok: false,
+              error: `скрипт записи исчез с диска: ${target.path} больше не рядом со scripts/fb.mjs`,
             }));
             return;
           }
