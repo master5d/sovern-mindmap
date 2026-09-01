@@ -29,6 +29,7 @@ beforeEach(() => {
     isEditing: false,
     boards: [],
     activeBoardId: '',
+    boardsReady: false,
   });
   useWorkflowStore.temporal.getState().clear();
   useWorkflowStore.temporal.getState().pause();
@@ -217,10 +218,14 @@ describe('temporal isolation', () => {
   });
 });
 
+
 describe('syncFileBoards: вкладка на живой борд', () => {
   beforeEach(() => {
     localStorage.clear();
-    useWorkflowStore.setState({ boards: [], activeBoardId: '' });
+    // boardsReady: true — большинство тестов этого блока проверяют штатную,
+    // уже инициализированную работу; тест C2 ниже намеренно переопределяет
+    // это в false для сценария «до инициализации».
+    useWorkflowStore.setState({ boards: [], activeBoardId: '', boardsReady: true });
   });
 
   it('заводит по вкладке на каждый борд и помнит sourceId', () => {
@@ -273,7 +278,11 @@ describe('syncFileBoards: вкладка на живой борд', () => {
     const file = useWorkflowStore.getState().boards.filter((b) => b.kind === 'file');
     expect(file[0].writable).toBe(true);
     expect(file[0].sourceError).toBeUndefined();
-    expect(file[1].writable).toBeFalsy();
+    // I4: строгий toBe(false), а не toBeFalsy() — источник вообще не прислал
+    // writable (undefined), и только явный дефолт `?? false` в реализации
+    // превращает его в false. toBeFalsy() пропустил бы undefined и не поймал
+    // бы мутацию, снимающую этот дефолт.
+    expect(file[1].writable).toBe(false);
     expect(file[1].sourceError).toBe('файл недоступен');
   });
 
@@ -289,8 +298,8 @@ describe('syncFileBoards: вкладка на живой борд', () => {
     const s = useWorkflowStore.getState();
     s.syncFileBoards([{ id: 'aaa', name: 'A' }, { id: 'bbb', name: 'B' }]);
     const idOfA = useWorkflowStore.getState().boards.find((b) => b.sourceId === 'aaa')!.id;
-    // Узел-маркер: если contentActive-борда переживёт исчезновение вкладки и
-    // осядет на новой активной доске — это порча чужого контента, ровно тот
+    // Узел-маркер: если контент активного борда переживёт исчезновение вкладки
+    // и осядет на новой активной доске — это порча чужого контента, ровно тот
     // класс бага, который защита в useBoardSync призвана предотвращать.
     useWorkflowStore.setState({
       activeBoardId: idOfA,
@@ -315,7 +324,7 @@ describe('syncFileBoards: вкладка на живой борд', () => {
     expect(settled.nodes.some((n) => n.data.label === 'ПРИЗРАК БОРДА A')).toBe(false);
   });
 
-  it("бордов не осталось вовсе — activeBoardId уходит в '', switchBoard не зовётся", async () => {
+  it('бордов не осталось вовсе — activeBoardId уходит в пустую строку, switchBoard не зовётся', async () => {
     const s = useWorkflowStore.getState();
     s.syncFileBoards([{ id: 'aaa', name: 'A' }]);
     const idOfA = useWorkflowStore.getState().boards.find((b) => b.sourceId === 'aaa')!.id;
@@ -327,5 +336,80 @@ describe('syncFileBoards: вкладка на живой борд', () => {
     const st = useWorkflowStore.getState();
     expect(st.boards).toHaveLength(0);
     expect(st.activeBoardId).toBe('');
+  });
+
+  // ── M5: дубли одного и того же живого борда во входном списке ──────────
+  it('дубли одного борда во входном списке не заводят две вкладки на один sourceId', () => {
+    useWorkflowStore.getState().syncFileBoards([
+      { id: 'aaa', name: 'A-старое' },
+      { id: 'aaa', name: 'A-новое' },
+    ]);
+    const file = useWorkflowStore.getState().boards.filter((b) => b.kind === 'file');
+    expect(file).toHaveLength(1);
+    expect(file[0].sourceId).toBe('aaa');
+    expect(file[0].name).toBe('A-новое'); // последний элемент по порядку побеждает
+  });
+
+  // ── I3: заслон «ничего не изменилось» проверен ФАКТОМ отсутствия записи,
+  //    не только итоговым содержимым списка ─────────────────────────────
+  it('без изменений повторный вызов не создаёт новый массив boards (заслон ничего-не-изменилось)', () => {
+    const s = useWorkflowStore.getState();
+    s.syncFileBoards([{ id: 'aaa', name: 'A', writable: true }]);
+    const boardsRefBefore = useWorkflowStore.getState().boards;
+
+    s.syncFileBoards([{ id: 'aaa', name: 'A', writable: true }]); // тот же вход, ничего не поменялось
+
+    const boardsRefAfter = useWorkflowStore.getState().boards;
+    // Ссылочное равенство: set({ boards }) не звался вообще — иначе массив
+    // был бы новым (spread), даже с идентичным содержимым.
+    expect(boardsRefAfter).toBe(boardsRefBefore);
+  });
+
+  // ── C1: switchBoard не воскрешает пропавшую вкладку, если она исчезла,
+  //    пока корутина «спала» на loadBoardContent ──────────────────────────
+  it('switchBoard, догоняющий асинхронно, не воскрешает вкладку, исчезнувшую во время загрузки контента', async () => {
+    const s = useWorkflowStore.getState();
+    s.syncFileBoards([{ id: 'aaa', name: 'A' }, { id: 'bbb', name: 'B' }]);
+    const idOfA = useWorkflowStore.getState().boards.find((b) => b.sourceId === 'aaa')!.id;
+    const idOfB = useWorkflowStore.getState().boards.find((b) => b.sourceId === 'bbb')!.id;
+    // 'bbb' уже когда-то имел контент — если switchBoard применит его после
+    // того, как вкладка исчезла, маркер осядет на графе и выдаст утечку.
+    await saveBoardContent(idOfB, [node('ghost-b', 'ПРИЗРАК БОРДА B')], []);
+    useWorkflowStore.setState({ activeBoardId: idOfA, nodes: [], edges: [] });
+
+    // Начать переключение на 'bbb' и НЕ ждать: async-функция выполняется
+    // синхронно до первого await (loadBoardContent) и отдаёт управление сюда
+    // раньше, чем стор обновится — ровно момент, когда во втором тике
+    // поллинга (см. C1 в ревью) вкладка 'bbb' успевает пропасть целиком.
+    const pending = s.switchBoard(idOfB);
+    // Второй тик поллинга: список живых бордов опустел вовсе.
+    useWorkflowStore.setState({ boards: [], activeBoardId: '' });
+
+    await pending;
+
+    const st = useWorkflowStore.getState();
+    expect(st.boards.some((b) => b.id === st.activeBoardId)).toBe(st.activeBoardId !== '');
+    expect(st.activeBoardId).not.toBe(idOfB);
+    expect(st.nodes.some((n) => n.data.label === 'ПРИЗРАК БОРДА B')).toBe(false);
+  });
+
+  // ── C2: до инициализации бордов синк не пишет НИЧЕГО ────────────────────
+  it('до инициализации бордов (boardsReady=false) синк не меняет boards и не пишет реестр', async () => {
+    useWorkflowStore.setState({ boards: [], activeBoardId: '', boardsReady: false });
+    const boardsRefBefore = useWorkflowStore.getState().boards;
+
+    useWorkflowStore.getState().syncFileBoards([{ id: 'aaa', name: 'A' }]);
+
+    const st = useWorkflowStore.getState();
+    expect(st.boards).toBe(boardsRefBefore); // ссылка не поменялась — set() не звался
+    expect(st.boards).toHaveLength(0);
+    expect(await loadBoardsRegistry()).toBeNull(); // ничего не сохранено
+  });
+
+  it('после инициализации (boardsReady=true) синк работает как прежде', () => {
+    useWorkflowStore.setState({ boards: [], activeBoardId: '', boardsReady: true });
+    useWorkflowStore.getState().syncFileBoards([{ id: 'aaa', name: 'A' }]);
+    const file = useWorkflowStore.getState().boards.filter((b) => b.kind === 'file');
+    expect(file.map((b) => b.sourceId)).toEqual(['aaa']);
   });
 });

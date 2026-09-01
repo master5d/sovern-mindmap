@@ -118,6 +118,12 @@ interface WorkflowState {
   // ── Canvas Project Tabs (multi-board) — non-temporal fields ──
   boards: BoardMeta[];
   activeBoardId: string;
+  /** True only once boards have gone through a real init path (`initBoards` —
+   *  called by both the registry-load and the fresh-install legacy-migration
+   *  branch of initBoardsFlow). Before that, `syncFileBoards` racing
+   *  migrateLegacyWorkspace for who writes the registry last is undefined
+   *  behaviour — the loser can drop the user's boards on next cold start. */
+  boardsReady: boolean;
   initBoards: (reg: { boards: BoardMeta[]; activeBoardId: string }) => void;
   switchBoard: (id: string) => Promise<void>;
   createBoard: (name?: string) => Promise<string>;
@@ -401,7 +407,9 @@ export const useWorkflowStore = create<WorkflowState>()(
   //    tracking (temporal partialize = nodes/edges only). ──
   boards: [],
   activeBoardId: '',
-  initBoards: (reg) => set({ boards: reg.boards, activeBoardId: reg.activeBoardId }),
+  boardsReady: false,
+  initBoards: (reg) =>
+    set({ boards: reg.boards, activeBoardId: reg.activeBoardId, boardsReady: true }),
   switchBoard: async (id) => {
     const { boards, activeBoardId, nodes, edges } = get();
     if (id === activeBoardId || !boards.some((b) => b.id === id)) return;
@@ -418,6 +426,16 @@ export const useWorkflowStore = create<WorkflowState>()(
       target?.kind === 'review'
         ? { nodes: content?.nodes ?? [], edges: content?.edges ?? [] }
         : stripArtifactContent(content?.nodes ?? [], content?.edges ?? []);
+    // Re-check AFTER the await, right before committing: while this coroutine
+    // slept on loadBoardContent, a concurrent caller (syncFileBoards polling,
+    // fire-and-forget) may have already removed `id` from boards — or wiped
+    // the whole registry. The check has to live HERE and not at entry: the
+    // entry-time `boards` snapshot is exactly what this function's own await
+    // can invalidate, so checking it again afterwards is checking a lie.
+    // Applying stale content past this point would resurrect a vanished tab
+    // as active and hand its nodes to whatever tab autosave saves next —
+    // the same class of corruption useBoardSync's StrictMode guard exists for.
+    if (!get().boards.some((b) => b.id === id)) return;
     withoutHistory(() => {
       get().setNodes(clean.nodes);
       get().setEdges(clean.edges);
@@ -493,8 +511,21 @@ export const useWorkflowStore = create<WorkflowState>()(
     return id;
   },
   syncFileBoards: (sources) => {
+    // Часовой готовности: до того, как борды реально прошли инициализацию
+    // (initBoards ещё не вызывался — ни путём загруженного реестра, ни путём
+    // migrateLegacyWorkspace на свежей установке), синк не имеет права ничего
+    // писать. Иначе он гонится с migrateLegacyWorkspace за тем, кто последним
+    // осядет в реестре, и пользовательская доска «Main» может пропасть на
+    // следующем холодном старте. Поллинг вызовет нас снова через несколько
+    // секунд, когда борды будут готовы — ничего не теряется.
+    if (!get().boardsReady) return;
+
     const prev = get().boards;
-    const wanted = new Map(sources.map((s) => [s.id, s]));
+    // Дубли одного и того же живого борда во входном списке (два элемента с
+    // одинаковым id) не имеют права завести две вкладки на один sourceId —
+    // последний элемент по порядку побеждает.
+    const deduped = [...new Map(sources.map((s) => [s.id, s])).values()];
+    const wanted = new Map(deduped.map((s) => [s.id, s]));
 
     /** Поля живого борда переносятся ЦЕЛИКОМ, включая отсутствие error:
      *  починившийся борд не должен носить прежнюю ошибку вечно. */
@@ -514,7 +545,7 @@ export const useWorkflowStore = create<WorkflowState>()(
         : b,
     );
     const present = new Set(renamed.filter((b) => b.kind === 'file').map((b) => b.sourceId));
-    const added: BoardMeta[] = sources
+    const added: BoardMeta[] = deduped
       .filter((s) => !present.has(s.id))
       .map((s) =>
         meta(
