@@ -179,3 +179,36 @@ describe('TabBar', () => {
     noBadge.cleanup();
   });
 });
+
+describe('TabBar × живые борды', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    // syncFileBoards молчит, пока индекс бордов не готов (см. useWorkflowStore) —
+    // задаём готовность явно, а не полагаемся на то, что её выставил кто-то раньше.
+    useWorkflowStore.setState({ boards: [], activeBoardId: '', boardsReady: true });
+  });
+
+  it('показывает имя живого борда, а не «board.canvas (live)»', () => {
+    useWorkflowStore.getState().syncFileBoards([{ id: 'aaa', name: 'Потоки данных' }]);
+    const names = useWorkflowStore
+      .getState()
+      .boards.filter((b) => b.kind === 'file')
+      .map((b) => b.name);
+    expect(names).toEqual(['Потоки данных']);
+    expect(names).not.toContain('board.canvas (live)');
+  });
+
+  it('вкладка сломанного борда несёт причину, а не выглядит пустой', () => {
+    useWorkflowStore.setState({
+      boards: [
+        { id: 'x', name: 'ghost', kind: 'file', sourceId: 'bbb', sourceError: 'файл недоступен' },
+      ],
+      activeBoardId: 'x',
+    });
+    const { container, cleanup } = mount(<TabBar pendingCount={0} />);
+    // Причина обязана быть В РАЗМЕТКЕ: молчащая вкладка читается как «борд пуст».
+    expect(container.textContent).toContain('ghost');
+    expect(container.textContent).toContain('файл недоступен');
+    cleanup();
+  });
+});

@@ -1,0 +1,4 @@
+{
+  "generic_scales": ["red"],
+  "rationale": "Проект не завёл семантический токен ошибки (нет --color-danger/error в src/index.css @theme). text-red-500 уже используется в NodeSidebar.tsx:197 для деструктивного действия (delete-кнопка); task-7-brief.md (.superpowers/sdd/2026-08-31-many-live-file-boards) явно предписал переиспользовать тот же класс для sourceError на вкладке живого борда вместо заведения нового токена. Заводить полноценный error-токен — отдельная задача дизайн-системы, не эта."
+}
