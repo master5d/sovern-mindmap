@@ -130,7 +130,13 @@ export function KanbanBoard() {
     // Предлагать перетаскивание на производном борде — обещать сохранение,
     // которого не будет: следующая пересборка перезапишет файл целиком.
     // Полагаться на 400 от сервера мало: к моменту ответа карточка уже уехала.
-    if (active?.kind === 'file' && !active.writable) return;
+    if (active?.kind === 'file' && !active.writable) {
+      // Молчаливый no-op неотличим от «борд не отвечает»: карточка выглядит
+      // валидной целью, drop проходит, и ничего не происходит без единого слова.
+      setToast('⚠ борд производный: правки не сохраняются');
+      setTimeout(() => setToast(null), 2500);
+      return;
+    }
     updateNodeData(id, { status }); // optimistic
     try {
       const res = await fetch('/api/feedback/status', {

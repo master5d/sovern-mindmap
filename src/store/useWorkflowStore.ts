@@ -45,7 +45,6 @@ export interface BoardMeta {
 }
 
 export const REVIEW_BOARD_NAME = 'Design Review';
-export const FILE_BOARD_NAME = 'board.canvas (live)';
 
 /**
  * Spec: artifact nodes live ONLY on the review board. Strips `artifact` nodes
