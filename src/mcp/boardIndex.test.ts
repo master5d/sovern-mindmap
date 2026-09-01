@@ -31,6 +31,41 @@ describe('readBoardIndex', () => {
     expect(readBoardIndex([p])[0].name).toBe('fleet');
   });
 
+  it('запись несёт size — второй компонент ключа версии, по которому ключуется клиент (F3)', () => {
+    // Клиент помнит «применено» по паре (mtime, size) — тем же ключом, каким
+    // здесь кэшируется разбор. Не отдай индекс size — клиент молча ключевался
+    // бы одним mtime, и его ключ разошёлся бы с серверным.
+    const p = join(dir, 'sized.canvas');
+    const text = board([], { 'desops:title': 'Размер' });
+    writeFileSync(p, text, 'utf8');
+    expect(readBoardIndex([p])[0].size).toBe(Buffer.byteLength(text, 'utf8'));
+
+    // Тот же путь, другое содержимое — size обязан поехать вместе с ним.
+    const longer = board([{ id: 'n1' }], { 'desops:title': 'Размер' });
+    writeFileSync(p, longer, 'utf8');
+    clearBoardNameCache();
+    expect(readBoardIndex([p])[0].size).toBe(Buffer.byteLength(longer, 'utf8'));
+  });
+
+  it('путь-КАТАЛОГ проходит statSync, но не читается — запись несёт error, а не бросает (F8)', () => {
+    // Единственная дешёвая улика на ветку readFileSync-throw: stat каталога
+    // успешен, а чтение даёт EISDIR. Без неё подмена «бросать вместо возврата
+    // записи с error» не роняет ничего, и падение уходило бы в 500 дев-моста
+    // на весь индекс сразу — из-за ОДНОГО кривого пути в SOVERN_BOARDS.
+    const p = join(dir, 'notafile.canvas');
+    mkdirSync(p);
+    const ok = join(dir, 'good.canvas');
+    writeFileSync(ok, board(), 'utf8');
+
+    const index = readBoardIndex([p, ok]);
+    expect(index[0].error).toMatch(/не читается/);
+    expect(index[0].writable).toBe(false);
+    expect(index[0].mtime).toBeGreaterThan(0); // statSync прошёл: это НЕ «файл недоступен»
+    // Сосед по списку не пострадал.
+    expect(index[1].error).toBeUndefined();
+    expect(index[1].name).toBe('good');
+  });
+
   it('id записи совпадает с boardSourceId пути', () => {
     const p = join(dir, 'a.canvas');
     writeFileSync(p, board(), 'utf8');

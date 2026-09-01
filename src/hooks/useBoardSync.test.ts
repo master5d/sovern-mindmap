@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { act } from 'react';
 import { useBoardSync } from './useBoardSync';
 import { useWorkflowStore } from '../store/useWorkflowStore';
+import type { BoardMeta } from '../store/useWorkflowStore';
 import { POLL_MS } from './pollBackoff';
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
@@ -46,7 +47,9 @@ describe('useBoardSync × boards registry gate', () => {
           return {
             ok: true,
             text: async () =>
-              JSON.stringify([{ id: 'live', name: 'live', path: 'x', writable: false, mtime: 1 }]),
+              JSON.stringify([
+                { id: 'live', name: 'live', path: 'x', writable: false, mtime: 1, size: 10 },
+              ]),
           };
         }
         return { ok: true, text: async () => CANVAS_TEXT };
@@ -117,8 +120,8 @@ describe('useBoardSync × boards registry gate', () => {
 
 describe('useBoardSync × много живых бордов', () => {
   const INDEX = [
-    { id: 'aaa', name: 'Флот', path: 'X:/a.canvas', writable: false, mtime: 1 },
-    { id: 'bbb', name: 'Потоки', path: 'X:/b.canvas', writable: false, mtime: 1 },
+    { id: 'aaa', name: 'Флот', path: 'X:/a.canvas', writable: false, mtime: 1, size: 10 },
+    { id: 'bbb', name: 'Потоки', path: 'X:/b.canvas', writable: false, mtime: 1, size: 20 },
   ];
 
   function stubFetch(index: unknown, bodies: Record<string, string>) {
@@ -139,7 +142,11 @@ describe('useBoardSync × много живых бордов', () => {
 
   beforeEach(() => {
     localStorage.clear();
-    useWorkflowStore.setState({ boards: [], activeBoardId: '' });
+    // boardsReady сбрасывать ОБЯЗАТЕЛЬНО вместе с boards: без него
+    // syncFileBoards — пустышка (см. часового готовности в useWorkflowStore),
+    // и тесты этого блока зеленели бы только на флаге, протёкшем из соседнего
+    // describe. Порядок-зависимый сьют — это не «работает» (F6).
+    useWorkflowStore.setState({ boards: [], activeBoardId: '', boardsReady: true });
     useWorkflowStore.getState().setNodes([]);
     useWorkflowStore.getState().setEdges([]);
   });
@@ -153,13 +160,42 @@ describe('useBoardSync × много живых бордов', () => {
     cleanup();
   });
 
-  it('тянет содержимое ТОЛЬКО активной вкладки, а не всех бордов', async () => {
-    // Иначе каждый тик поллинга качает N файлов целиком.
-    const calls = stubFetch(INDEX, {});
-    const cleanup = await mountAndSettle();
-    const bodyCalls = calls.filter((u) => u.startsWith('/board/'));
-    expect(bodyCalls.length).toBeLessThanOrEqual(1);
-    cleanup();
+  it('тело тянется РОВНО за активную вкладку: ноль запросов на пользовательской, только свой борд на живой', async () => {
+    // Две цели в одном тесте, и обе нужны (F5):
+    //  (1) реестр есть, активна ПОЛЬЗОВАТЕЛЬСКАЯ доска -> РОВНО НОЛЬ запросов
+    //      тела. Прежняя формулировка `toBeLessThanOrEqual(1)` зеленела на
+    //      нуле, который получался вообще не по делу: activeBoardId был пуст,
+    //      и ранний заслон многобордовой безопасности возвращал управление
+    //      до кода выбора цели. Снятие этого заслона теперь красит тест.
+    //  (2) активна ЖИВАЯ вкладка -> запрошен ИМЕННО её борд, а не index[0].
+    //      Подмена выбора цели безусловным index[0] теперь тоже красит.
+    const registry: { boards: BoardMeta[]; activeBoardId: string } = {
+      boards: [
+        { id: 'b-1', name: 'Main', kind: 'user' },
+        { id: 'b-live-b', name: 'Потоки', kind: 'file', sourceId: 'bbb' },
+      ],
+      activeBoardId: 'b-1',
+    };
+    localStorage.setItem('sovern-boards', JSON.stringify(registry));
+
+    // (1) активна пользовательская доска.
+    useWorkflowStore.getState().initBoards(registry);
+    const userCalls = stubFetch(INDEX, {});
+    const cleanupUser = await mountAndSettle();
+    expect(userCalls.filter((u) => u.startsWith('/board/'))).toHaveLength(0);
+    expect(useWorkflowStore.getState().nodes).toHaveLength(0);
+    cleanupUser();
+    vi.unstubAllGlobals();
+
+    // (2) активна живая вкладка ВТОРОГО борда — index[0] здесь не подойдёт.
+    useWorkflowStore.getState().initBoards({ ...registry, activeBoardId: 'b-live-b' });
+    const liveCalls = stubFetch(INDEX, {});
+    const cleanupLive = await mountAndSettle();
+    const bodyCalls = liveCalls.filter((u) => u.startsWith('/board/'));
+    expect(bodyCalls).toHaveLength(1);
+    expect(bodyCalls[0]).toBe('/board/bbb.canvas');
+    cleanupLive();
+    useWorkflowStore.getState().initBoards({ boards: [], activeBoardId: '' });
   });
 
   it('борд с error не роняет соседей, не выдаёт себя за пустой и не запрашивает тело', async () => {
@@ -423,6 +459,169 @@ describe('useBoardSync × много живых бордов', () => {
       });
 
       expect(useWorkflowStore.getState().nodes.length).toBeGreaterThan(0);
+
+      act(() => root.unmount());
+      container.remove();
+    } finally {
+      vi.useRealTimers();
+      useWorkflowStore.getState().initBoards({ boards: [], activeBoardId: '' });
+    }
+  });
+
+  it('вход в режим правки, пока летит тело, не даёт содержимому сесть поверх работы (F1)', async () => {
+    // view-first проверяется наверху тика, но между той проверкой и apply
+    // стоят ДВА await (индекс и тело). Пользователь, вошедший в правку, пока
+    // тело летело, получал setNodes/setEdges поверх своей работы — регресс
+    // относительно состояния до ветки живых бордов.
+    useWorkflowStore.getState().initBoards({
+      boards: [{ id: 'b-live', name: 'live', kind: 'file', sourceId: 'aaa' }],
+      activeBoardId: 'b-live',
+    });
+
+    let resolveBody: (() => void) | null = null;
+    const bodyGate = new Promise<void>((res) => {
+      resolveBody = res;
+    });
+    const calls: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        calls.push(url);
+        if (url.startsWith('/api/boards')) {
+          return { ok: true, text: async () => JSON.stringify(INDEX) };
+        }
+        if (url.startsWith('/board/aaa')) {
+          await bodyGate; // тело зависло в полёте
+        }
+        return { ok: true, text: async () => CANVAS_TEXT };
+      }),
+    );
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    act(() => root.render(createElement(Probe)));
+
+    try {
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 0));
+      });
+      expect(calls.some((u) => u.startsWith('/board/aaa'))).toBe(true);
+
+      // Пока тело летит — пользователь начал править граф руками.
+      useWorkflowStore.getState().enterEditMode();
+
+      await act(async () => {
+        resolveBody!();
+        await new Promise((r) => setTimeout(r, 0));
+      });
+
+      // Содержимое борда НЕ имеет права лечь поверх правки.
+      expect(useWorkflowStore.getState().nodes).toHaveLength(0);
+    } finally {
+      act(() => root.unmount());
+      container.remove();
+      useWorkflowStore.getState().exitEditMode();
+      useWorkflowStore.getState().initBoards({ boards: [], activeBoardId: '' });
+    }
+  });
+
+  it('уход и возврат на живую вкладку БЕЗ тика между ними всё равно перечитывают борд (F2)', async () => {
+    // Отличие от C5: там между уходом и возвратом тест прокручивал интервал
+    // опроса, и инвалидация успевала «наблюдиться» тиком. Здесь возврат
+    // быстрее опроса — сэмплирование состояния тиком не увидит ничего, и
+    // холст, очищенный switchBoard'ом, останется пустым до следующего
+    // реального изменения файла на диске.
+    useWorkflowStore.getState().initBoards({
+      boards: [
+        { id: 'b-1', name: 'Main', kind: 'user' },
+        { id: 'b-live', name: 'live', kind: 'file', sourceId: 'aaa' },
+      ],
+      activeBoardId: 'b-live',
+    });
+    stubFetch(INDEX, {}); // mtime/size 'aaa' не меняются на протяжении теста
+
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const container = document.createElement('div');
+      document.body.appendChild(container);
+      const root = createRoot(container);
+      act(() => root.render(createElement(Probe)));
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(useWorkflowStore.getState().nodes.length).toBeGreaterThan(0);
+
+      // Уход и возврат подряд, БЕЗ прокрутки таймеров между ними: ни один
+      // тик поллинга не наблюдал промежуточное состояние.
+      useWorkflowStore.setState({ activeBoardId: 'b-1', nodes: [], edges: [] });
+      useWorkflowStore.setState({ activeBoardId: 'b-live' });
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(POLL_MS);
+      });
+
+      expect(useWorkflowStore.getState().nodes.length).toBeGreaterThan(0);
+
+      act(() => root.unmount());
+      container.remove();
+    } finally {
+      vi.useRealTimers();
+      useWorkflowStore.getState().initBoards({ boards: [], activeBoardId: '' });
+    }
+  });
+
+  it('тот же mtime при ДРУГОМ размере — тело перечитывается (ключ клиента = пара, как у сервера) (F3)', async () => {
+    // Сервер кэширует разбор борда по (mtime, size). Ключуй клиент одним
+    // mtime — файл, восстановленный с сохранённым таймстемпом, но другого
+    // размера: сервер промахнётся мимо кэша и отдаст НОВОЕ имя, а клиент
+    // тело не перечитает. Новое имя со старым содержимым.
+    useWorkflowStore.getState().initBoards({
+      boards: [{ id: 'b-live', name: 'live', kind: 'file', sourceId: 'aaa' }],
+      activeBoardId: 'b-live',
+    });
+
+    let size = 10;
+    const bodyCalls: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url.startsWith('/api/boards')) {
+          return {
+            ok: true,
+            text: async () => JSON.stringify([{ ...INDEX[0], mtime: 1, size }, INDEX[1]]),
+          };
+        }
+        bodyCalls.push(url);
+        return { ok: true, text: async () => CANVAS_TEXT };
+      }),
+    );
+
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const container = document.createElement('div');
+      document.body.appendChild(container);
+      const root = createRoot(container);
+      act(() => root.render(createElement(Probe)));
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(bodyCalls).toHaveLength(1);
+
+      // Тот же mtime, ДРУГОЙ размер: содержимое борда изменилось.
+      size = 999;
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(POLL_MS);
+      });
+      expect(bodyCalls).toHaveLength(2);
+
+      // Контроль: пара не изменилась — второго перечитывания быть не должно.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(POLL_MS);
+      });
+      expect(bodyCalls).toHaveLength(2);
 
       act(() => root.unmount());
       container.remove();

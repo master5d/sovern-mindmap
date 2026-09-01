@@ -11,6 +11,11 @@ export interface BoardSource {
   path: string;
   writable: boolean;
   mtime: number;
+  /** Размер файла в байтах. Часть ключа версии борда: клиент помнит
+   *  «применено» по паре (mtime, size) — тем же ключом, которым здесь
+   *  кэшируется разбор. Один mtime не различил бы файл, восстановленный с
+   *  сохранённым таймстемпом, но другим содержимым. */
+  size: number;
   /** Причина, по которой борд не прочитан. Присутствие поля = «не смог
    *  прочитать», и это ДРУГОЕ состояние, чем пустой борд. */
   error?: string;
@@ -75,7 +80,7 @@ export function readBoardIndex(paths: string[]): BoardSource[] {
     try {
       stat = statSync(path);
     } catch (e) {
-      return { id, name: fallback, path, writable: false, mtime: 0, error: `файл недоступен: ${(e as Error).message}` };
+      return { id, name: fallback, path, writable: false, mtime: 0, size: 0, error: `файл недоступен: ${(e as Error).message}` };
     }
     const { mtimeMs: mtime, size } = stat;
 
@@ -94,6 +99,7 @@ export function readBoardIndex(paths: string[]): BoardSource[] {
         path,
         writable: hit.error ? false : canWrite,
         mtime,
+        size,
         ...(hit.error ? { error: hit.error } : {}),
       };
     }
@@ -102,10 +108,10 @@ export function readBoardIndex(paths: string[]): BoardSource[] {
     try {
       text = readFileSync(path, 'utf8');
     } catch (e) {
-      return { id, name: fallback, path, writable: false, mtime, error: `файл не читается: ${(e as Error).message}` };
+      return { id, name: fallback, path, writable: false, mtime, size, error: `файл не читается: ${(e as Error).message}` };
     }
     const { name, error } = titleFrom(text, fallback);
     nameCache.set(path, { mtime, size, name, error });
-    return { id, name, path, writable: error ? false : canWrite, mtime, ...(error ? { error } : {}) };
+    return { id, name, path, writable: error ? false : canWrite, mtime, size, ...(error ? { error } : {}) };
   });
 }

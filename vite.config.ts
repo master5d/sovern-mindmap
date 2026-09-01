@@ -117,6 +117,15 @@ const serveBoard = (): Plugin => ({
             res.end(JSON.stringify({ ok: false, error: 'invalid id or status' }));
             return;
           }
+          // Отсутствующий boardId — ДРУГАЯ причина отказа, чем «прислали id,
+          // которого нет среди живых». Общий текст печатал бы «борд undefined
+          // не значится среди живых», и оператор искал бы борд с таким именем
+          // вместо клиента, забывшего положить поле в тело запроса.
+          if (typeof boardId !== 'string' || !boardId) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ ok: false, error: 'boardId не передан' }));
+            return;
+          }
           const target = readBoardIndex(BOARD_PATHS).find((b) => b.id === boardId);
           if (!target) {
             res.statusCode = 400;

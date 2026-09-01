@@ -190,12 +190,13 @@ describe('TabBar × живые борды', () => {
 
   it('показывает имя живого борда, а не «board.canvas (live)»', () => {
     useWorkflowStore.getState().syncFileBoards([{ id: 'aaa', name: 'Потоки данных' }]);
-    const names = useWorkflowStore
-      .getState()
-      .boards.filter((b) => b.kind === 'file')
-      .map((b) => b.name);
-    expect(names).toEqual(['Потоки данных']);
-    expect(names).not.toContain('board.canvas (live)');
+    // Утверждать имя нужно В РАЗМЕТКЕ, а не в хранилище: тест целиком про
+    // store не рендерил TabBar вовсе, и подмена «рисовать константу вместо
+    // имени борда» проходила бы незамеченной (F7).
+    const { container, cleanup } = mount(<TabBar pendingCount={0} />);
+    expect(container.textContent).toContain('Потоки данных');
+    expect(container.textContent).not.toContain('board.canvas (live)');
+    cleanup();
   });
 
   it('вкладка сломанного борда несёт причину, а не выглядит пустой', () => {
