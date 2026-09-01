@@ -80,7 +80,7 @@ export function TabBar({ pendingCount }: { pendingCount: number }) {
               // легко раздувают одну вкладку и выталкивают остальные за край
               // прокрутки — эта вкладка обязана ужиматься наравне с другими.
               <span
-                className="text-red-500 min-w-0 max-w-[9rem] truncate text-[10px]"
+                className="text-danger min-w-0 max-w-[9rem] truncate text-[10px]"
                 title={b.sourceError}
               >
                 ⚠ {b.sourceError}

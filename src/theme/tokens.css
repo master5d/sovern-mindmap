@@ -20,6 +20,12 @@
   --grid-opacity: 0.3;
   --lane-bg: rgba(148, 163, 184, 0.05);
 
+  /* Семантический токен отказа: сообщение об ошибке в интерфейсе.
+     Значение взято из уже существующего красного проекта (--status-blocked,
+     --q-dofirst), а не изобретено: два разных красных рядом читались бы как
+     два разных смысла. Заведён 2026-09-01 взамен сырого text-red-500. */
+  --danger: #ef4444;
+
   --status-idle: #64748b;
   --status-pending: #eab308;
   --status-active: #3b82f6;
@@ -68,6 +74,8 @@
   --grid-dots: #cbd5e1;
   --grid-opacity: 0.6;
   --lane-bg: rgba(15, 23, 42, 0.03);
+
+  --danger: #dc2626;
 
   --status-idle: #64748b;
   --status-pending: #ca8a04;
