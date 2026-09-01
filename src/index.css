@@ -13,6 +13,7 @@
   --color-secondary: var(--text-secondary);
   --color-muted: var(--text-muted);
   --color-accent: var(--accent);
+  --color-danger: var(--danger);
 }
 
 html,
