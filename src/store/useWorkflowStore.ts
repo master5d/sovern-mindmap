@@ -130,7 +130,6 @@ interface WorkflowState {
   renameBoard: (id: string, name: string) => void;
   deleteBoard: (id: string) => Promise<void>;
   ensureReviewBoard: () => string;
-  ensureFileBoard: () => string;
   syncFileBoards: (sources: { id: string; name: string; writable?: boolean; error?: string }[]) => void;
 }
 
@@ -495,16 +494,6 @@ export const useWorkflowStore = create<WorkflowState>()(
     if (existing) return existing.id;
     const id = `b-${crypto.randomUUID()}`;
     const meta: BoardMeta = { id, name: REVIEW_BOARD_NAME, kind: 'review' };
-    const boards = [...get().boards, meta];
-    set({ boards });
-    void saveBoardsRegistry({ boards, activeBoardId: get().activeBoardId });
-    return id;
-  },
-  ensureFileBoard: () => {
-    const existing = get().boards.find((b) => b.kind === 'file');
-    if (existing) return existing.id;
-    const id = `b-${crypto.randomUUID()}`;
-    const meta: BoardMeta = { id, name: FILE_BOARD_NAME, kind: 'file' };
     const boards = [...get().boards, meta];
     set({ boards });
     void saveBoardsRegistry({ boards, activeBoardId: get().activeBoardId });
