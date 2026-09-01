@@ -34,11 +34,61 @@ import {
 import { dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { JSONCanvas, JSONCanvasNode, JSONCanvasEdge } from '../types/index.js';
+import { resolveBoardPaths, normalizeBoardPath, DEFAULT_BOARD_PATH } from './boardSources';
+import { readBoardIndex } from './boardIndex';
 
-export const DEFAULT_BOARD_PATH = 'C:/telo/Efforts/Ongoing/mc_hub/feedback/board.canvas';
+// Константа больше не живёт здесь второй копией: единственное объявление —
+// в boardSources, откуда её читают и конфиг, и этот модуль.
+export { DEFAULT_BOARD_PATH } from './boardSources';
 
+/** Куда пишет MCP. Живых бордов может быть много, но ПИШУЩАЯ полоса одна:
+ *  артефакты дизайн-ревью обязаны ехать в неё, а не в производный борд,
+ *  который следующая пересборка перезапишет. */
 export function resolveBoardPath(): string {
-  return process.env.SOVERN_BOARD ?? DEFAULT_BOARD_PATH;
+  const single = process.env.SOVERN_BOARD?.trim();
+  const many = process.env.SOVERN_BOARDS?.trim();
+  // Обе переменные заданы — список выигрывает (см. resolveBoardPaths), и
+  // здесь мы обязаны ТОЖЕ уйти в ветку списка: иначе SOVERN_BOARD, указывающий
+  // на производный борд без fb.mjs, был бы возвращён в обход выбора writable.
+  if (single && !many) {
+    // normalizeBoardPath — не только для красоты вывода: следующая задача
+    // переводит дев-сервер на resolveBoardPaths/readBoardIndex, которые
+    // нормализуют ВСЕГДА, и без нормализации здесь два модуля посчитали бы
+    // разные boardSourceId для одного и того же борда.
+    return normalizeBoardPath(single);
+  }
+
+  const { paths, note } = resolveBoardPaths();
+  if (note) {
+    // Диагностика resolveBoardPaths (обе переменные заданы, каталог без
+    // *.canvas) иначе долетает только до дев-сервера — в процессе MCP она
+    // терялась бы бесследно.
+    console.warn(`[SOVERN] ${note}`);
+  }
+  const index = readBoardIndex(paths);
+  const writable = index.find((b) => b.writable);
+  if (writable) return writable.path;
+
+  // Пишущего нет. Среди читаемых бордов берём первый — а не позиционно
+  // первый вообще: борд с error всё равно уронит mutate() с «unreadable
+  // JSON Canvas», и оператор, увидевший «нет ни одного пишущего», пойдёт
+  // искать отсутствующий fb.mjs — не ту причину.
+  const readable = index.find((b) => !b.error);
+  if (readable) {
+    console.warn(
+      `[SOVERN] среди живых бордов нет ни одного пишущего (нет scripts/fb.mjs рядом); беру первый читаемый: ${readable.path}`,
+    );
+    return readable.path;
+  }
+
+  const first = index[0];
+  // Все борды битые — фолбэку буквально не из чего выбирать читаемый путь.
+  // Называем причину ПЕРВОГО борда, чтобы оператор не искал fb.mjs там, где
+  // проблема на самом деле в самом файле.
+  console.warn(
+    `[SOVERN] среди живых бордов нет ни одного пишущего, и выбранный борд не читается: ${first?.error ?? 'нет бордов'} (${first?.path ?? DEFAULT_BOARD_PATH})`,
+  );
+  return first?.path ?? DEFAULT_BOARD_PATH;
 }
 
 function assertCanvasShape(parsed: unknown, path: string): asserts parsed is JSONCanvas {

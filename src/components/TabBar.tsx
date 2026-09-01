@@ -62,7 +62,30 @@ export function TabBar({ pendingCount }: { pendingCount: number }) {
             }`}
           >
             {b.kind === 'review' && <Palette size={12} className="text-accent shrink-0" />}
-            {b.kind === 'file' && <FileText size={12} className="text-secondary shrink-0" />}
+            {b.kind === 'file' && (
+              <FileText
+                size={12}
+                className="text-secondary shrink-0"
+                aria-label={
+                  b.writable
+                    ? 'живой борд: правки уходят в fb.mjs'
+                    : 'живой борд из файла: правки не сохраняются'
+                }
+              />
+            )}
+            {b.kind === 'file' && b.sourceError && (
+              // Причина в разметке, а не только в консоли: молчащая вкладка
+              // читается как «борд пуст», а он не прочитан.
+              // shrink-0 отменён нарочно: путь+текст исключения файловой системы
+              // легко раздувают одну вкладку и выталкивают остальные за край
+              // прокрутки — эта вкладка обязана ужиматься наравне с другими.
+              <span
+                className="text-red-500 min-w-0 max-w-[9rem] truncate text-[10px]"
+                title={b.sourceError}
+              >
+                ⚠ {b.sourceError}
+              </span>
+            )}
             {editingId === b.id ? (
               <input
                 autoFocus

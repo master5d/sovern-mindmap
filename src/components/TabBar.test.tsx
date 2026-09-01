@@ -179,3 +179,37 @@ describe('TabBar', () => {
     noBadge.cleanup();
   });
 });
+
+describe('TabBar × живые борды', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    // syncFileBoards молчит, пока индекс бордов не готов (см. useWorkflowStore) —
+    // задаём готовность явно, а не полагаемся на то, что её выставил кто-то раньше.
+    useWorkflowStore.setState({ boards: [], activeBoardId: '', boardsReady: true });
+  });
+
+  it('показывает имя живого борда, а не «board.canvas (live)»', () => {
+    useWorkflowStore.getState().syncFileBoards([{ id: 'aaa', name: 'Потоки данных' }]);
+    // Утверждать имя нужно В РАЗМЕТКЕ, а не в хранилище: тест целиком про
+    // store не рендерил TabBar вовсе, и подмена «рисовать константу вместо
+    // имени борда» проходила бы незамеченной (F7).
+    const { container, cleanup } = mount(<TabBar pendingCount={0} />);
+    expect(container.textContent).toContain('Потоки данных');
+    expect(container.textContent).not.toContain('board.canvas (live)');
+    cleanup();
+  });
+
+  it('вкладка сломанного борда несёт причину, а не выглядит пустой', () => {
+    useWorkflowStore.setState({
+      boards: [
+        { id: 'x', name: 'ghost', kind: 'file', sourceId: 'bbb', sourceError: 'файл недоступен' },
+      ],
+      activeBoardId: 'x',
+    });
+    const { container, cleanup } = mount(<TabBar pendingCount={0} />);
+    // Причина обязана быть В РАЗМЕТКЕ: молчащая вкладка читается как «борд пуст».
+    expect(container.textContent).toContain('ghost');
+    expect(container.textContent).toContain('файл недоступен');
+    cleanup();
+  });
+});

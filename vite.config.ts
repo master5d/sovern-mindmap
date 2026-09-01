@@ -4,10 +4,12 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { dirname, join, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import { readArtifacts, readArtifactsWithDecisions, appendDecision } from './src/mcp/artifactInbox';
 import { BodyTooLargeError, readBodyCapped } from './src/mcp/httpBody';
 import { resolveContained } from './src/mcp/pathContainment';
+import { resolveBoardPaths } from './src/mcp/boardSources';
+import { readBoardIndex, fbCliFor } from './src/mcp/boardIndex';
 
 /** Единственный корень, куда дев-мост имеет право писать. */
 const TELO_ROOT = 'C:\\telo';
@@ -26,11 +28,12 @@ function sendBodyError(
   req.destroy();
 }
 
-// Путь к board.canvas: env SOVERN_BOARD или дефолт — mc_hub feedback board.
-const BOARD_PATH =
-  process.env.SOVERN_BOARD ?? 'C:/telo/Efforts/Ongoing/mc_hub/feedback/board.canvas';
-// fb.mjs живёт рядом с board.canvas: <feedback>/scripts/fb.mjs
-const FB_CLI = join(dirname(BOARD_PATH), 'scripts', 'fb.mjs');
+// Живых бордов может быть много: SOVERN_BOARDS перечисляет файлы И каталоги.
+// Разбор — в src/mcp/boardSources, потому что этот файл вне src/** и vitest
+// его не видит; логика здесь была бы непокрываемой.
+const { paths: BOARD_PATHS, note: BOARD_NOTE } = resolveBoardPaths();
+if (BOARD_NOTE) console.warn(`[SOVERN] ${BOARD_NOTE}`);
+console.log(`[SOVERN] живых бордов: ${BOARD_PATHS.length}`);
 
 const STATUSES = ['idle', 'pending', 'active', 'done', 'blocked'];
 const ID_RE = /^fb_[0-9a-f]{12}$/;
@@ -40,18 +43,63 @@ const ID_RE = /^fb_[0-9a-f]{12}$/;
 const serveBoard = (): Plugin => ({
   name: 'sovern-serve-board',
   configureServer(server) {
+    // GET /api/boards — что вообще живо, как это назвать и куда можно писать.
+    server.middlewares.use('/api/boards', (_req, res) => {
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Cache-Control', 'no-store');
+      res.end(JSON.stringify(readBoardIndex(BOARD_PATHS)));
+    });
+
+    // GET /board.canvas — ПЕРВЫЙ борд списка. Маршрут сохранён: на него смотрят
+    // внешние потребители и вкладки, созданные до этой правки.
+    //
+    // Регистрация ДО /board/ — обязательна. connect отрезает хвостовой слэш
+    // маршрута ('/board/' -> '/board') и на границе сегмента принимает не
+    // только '/', но и '.' — так что маршрут '/board/', будь он первым,
+    // перехватывал бы и '/board.canvas' (проверено живым прогоном: id
+    // разбирался в пустую строку, ответ был 404 не из этого блока).
     server.middlewares.use('/board.canvas', (_req, res) => {
-      if (!existsSync(BOARD_PATH)) {
+      const first = BOARD_PATHS[0];
+      if (!first) {
         res.statusCode = 404;
-        res.end('board.canvas not found at ' + BOARD_PATH);
+        res.end('живых бордов нет: список пуст');
+        return;
+      }
+      if (!existsSync(first)) {
+        res.statusCode = 404;
+        res.end('борд не найден на диске: ' + first);
         return;
       }
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Cache-Control', 'no-store');
-      res.end(readFileSync(BOARD_PATH, 'utf8'));
+      res.end(readFileSync(first, 'utf8'));
     });
 
-    // POST /api/feedback/status { id, status } → fb.mjs status <id> <status>
+    // GET /board/<id>.canvas — содержимое одного борда по устойчивому id.
+    server.middlewares.use('/board/', (req, res) => {
+      const id = String(req.url ?? '').replace(/^\//, '').replace(/\.canvas$/, '').split('?')[0];
+      if (!id) {
+        res.statusCode = 404;
+        res.end('id борда не указан: ожидался /board/<id>.canvas');
+        return;
+      }
+      const found = readBoardIndex(BOARD_PATHS).find((b) => b.id === id);
+      if (!found) {
+        res.statusCode = 404;
+        res.end(`борд с id ${id} не значится среди живых`);
+        return;
+      }
+      if (!existsSync(found.path)) {
+        res.statusCode = 404;
+        res.end('борд не найден на диске: ' + found.path);
+        return;
+      }
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Cache-Control', 'no-store');
+      res.end(readFileSync(found.path, 'utf8'));
+    });
+
+    // POST /api/feedback/status { id, status, boardId } → fb.mjs status <id> <status>
     // (kanban drag-and-drop write-back в feedback.jsonl + rebuild board.canvas)
     server.middlewares.use('/api/feedback/status', (req, res) => {
       if (req.method !== 'POST') {
@@ -62,14 +110,54 @@ const serveBoard = (): Plugin => ({
       readBodyCapped(req).then((body) => {
         res.setHeader('Content-Type', 'application/json');
         try {
-          const { id, status } = JSON.parse(body);
+          const { id, status, boardId } = JSON.parse(body);
           // strict-валидация: аргументы уходят в execFile без shell, но не доверяем входу
           if (!ID_RE.test(id) || !STATUSES.includes(status)) {
             res.statusCode = 400;
             res.end(JSON.stringify({ ok: false, error: 'invalid id or status' }));
             return;
           }
-          const out = execFileSync(process.execPath, [FB_CLI, 'status', id, status], {
+          // Отсутствующий boardId — ДРУГАЯ причина отказа, чем «прислали id,
+          // которого нет среди живых». Общий текст печатал бы «борд undefined
+          // не значится среди живых», и оператор искал бы борд с таким именем
+          // вместо клиента, забывшего положить поле в тело запроса.
+          if (typeof boardId !== 'string' || !boardId) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ ok: false, error: 'boardId не передан' }));
+            return;
+          }
+          const target = readBoardIndex(BOARD_PATHS).find((b) => b.id === boardId);
+          if (!target) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ ok: false, error: `борд ${boardId} не значится среди живых` }));
+            return;
+          }
+          // Индекс уже посчитал writable (false для производных и для бордов
+          // с error — readBoardIndex гарантирует это как инвариант). Спрашиваем
+          // ИМЕННО его, а не заново гадаем по fbCliFor — иначе /api/boards и
+          // эта ручка отвечали бы на «можно ли сюда писать» по-разному, и
+          // борд с битым board.canvas писался бы, хотя индекс сказал false.
+          if (!target.writable) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({
+              ok: false,
+              error: `борд «${target.name}» производный или нечитаемый: писать в него нечем`,
+            }));
+            return;
+          }
+          // Вторая, отдельная проверка — гонка «скрипт исчез между индексацией
+          // и вызовом» (writable мог быть true секунду назад). Не сливать с
+          // проверкой выше: разные причины отказа, разное действие оператора.
+          const cli = fbCliFor(target.path);
+          if (!cli) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({
+              ok: false,
+              error: `скрипт записи исчез с диска: ${target.path} больше не рядом со scripts/fb.mjs`,
+            }));
+            return;
+          }
+          const out = execFileSync(process.execPath, [cli, 'status', id, status], {
             encoding: 'utf8',
             timeout: 10_000,
           });

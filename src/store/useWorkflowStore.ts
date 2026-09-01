@@ -33,10 +33,18 @@ export interface BoardMeta {
   id: string;
   name: string;
   kind: 'user' | 'review' | 'file';
+  /** Идентификатор живого борда из /api/boards. Есть только у kind === 'file'.
+   *  Хеш пути, а не позиция: вставка борда в середину списка не должна
+   *  переставлять вкладки местами. */
+  sourceId?: string;
+  /** Можно ли писать в этот борд (рядом лежит scripts/fb.mjs). */
+  writable?: boolean;
+  /** Причина, по которой борд не прочитан. Присутствие поля = «не смог
+   *  прочитать»; пустой холст в этом случае соврал бы, что борд пуст. */
+  sourceError?: string;
 }
 
 export const REVIEW_BOARD_NAME = 'Design Review';
-export const FILE_BOARD_NAME = 'board.canvas (live)';
 
 /**
  * Spec: artifact nodes live ONLY on the review board. Strips `artifact` nodes
@@ -109,13 +117,19 @@ interface WorkflowState {
   // ── Canvas Project Tabs (multi-board) — non-temporal fields ──
   boards: BoardMeta[];
   activeBoardId: string;
+  /** True only once boards have gone through a real init path (`initBoards` —
+   *  called by both the registry-load and the fresh-install legacy-migration
+   *  branch of initBoardsFlow). Before that, `syncFileBoards` racing
+   *  migrateLegacyWorkspace for who writes the registry last is undefined
+   *  behaviour — the loser can drop the user's boards on next cold start. */
+  boardsReady: boolean;
   initBoards: (reg: { boards: BoardMeta[]; activeBoardId: string }) => void;
   switchBoard: (id: string) => Promise<void>;
   createBoard: (name?: string) => Promise<string>;
   renameBoard: (id: string, name: string) => void;
   deleteBoard: (id: string) => Promise<void>;
   ensureReviewBoard: () => string;
-  ensureFileBoard: () => string;
+  syncFileBoards: (sources: { id: string; name: string; writable?: boolean; error?: string }[]) => void;
 }
 
 /**
@@ -391,7 +405,9 @@ export const useWorkflowStore = create<WorkflowState>()(
   //    tracking (temporal partialize = nodes/edges only). ──
   boards: [],
   activeBoardId: '',
-  initBoards: (reg) => set({ boards: reg.boards, activeBoardId: reg.activeBoardId }),
+  boardsReady: false,
+  initBoards: (reg) =>
+    set({ boards: reg.boards, activeBoardId: reg.activeBoardId, boardsReady: true }),
   switchBoard: async (id) => {
     const { boards, activeBoardId, nodes, edges } = get();
     if (id === activeBoardId || !boards.some((b) => b.id === id)) return;
@@ -408,6 +424,16 @@ export const useWorkflowStore = create<WorkflowState>()(
       target?.kind === 'review'
         ? { nodes: content?.nodes ?? [], edges: content?.edges ?? [] }
         : stripArtifactContent(content?.nodes ?? [], content?.edges ?? []);
+    // Re-check AFTER the await, right before committing: while this coroutine
+    // slept on loadBoardContent, a concurrent caller (syncFileBoards polling,
+    // fire-and-forget) may have already removed `id` from boards — or wiped
+    // the whole registry. The check has to live HERE and not at entry: the
+    // entry-time `boards` snapshot is exactly what this function's own await
+    // can invalidate, so checking it again afterwards is checking a lie.
+    // Applying stale content past this point would resurrect a vanished tab
+    // as active and hand its nodes to whatever tab autosave saves next —
+    // the same class of corruption useBoardSync's StrictMode guard exists for.
+    if (!get().boards.some((b) => b.id === id)) return;
     withoutHistory(() => {
       get().setNodes(clean.nodes);
       get().setEdges(clean.edges);
@@ -472,15 +498,78 @@ export const useWorkflowStore = create<WorkflowState>()(
     void saveBoardsRegistry({ boards, activeBoardId: get().activeBoardId });
     return id;
   },
-  ensureFileBoard: () => {
-    const existing = get().boards.find((b) => b.kind === 'file');
-    if (existing) return existing.id;
-    const id = `b-${crypto.randomUUID()}`;
-    const meta: BoardMeta = { id, name: FILE_BOARD_NAME, kind: 'file' };
-    const boards = [...get().boards, meta];
+  syncFileBoards: (sources) => {
+    // Часовой готовности: до того, как борды реально прошли инициализацию
+    // (initBoards ещё не вызывался — ни путём загруженного реестра, ни путём
+    // migrateLegacyWorkspace на свежей установке), синк не имеет права ничего
+    // писать. Иначе он гонится с migrateLegacyWorkspace за тем, кто последним
+    // осядет в реестре, и пользовательская доска «Main» может пропасть на
+    // следующем холодном старте. Поллинг вызовет нас снова через несколько
+    // секунд, когда борды будут готовы — ничего не теряется.
+    if (!get().boardsReady) return;
+
+    const prev = get().boards;
+    // Дубли одного и того же живого борда во входном списке (два элемента с
+    // одинаковым id) не имеют права завести две вкладки на один sourceId —
+    // последний элемент по порядку побеждает.
+    const deduped = [...new Map(sources.map((s) => [s.id, s])).values()];
+    const wanted = new Map(deduped.map((s) => [s.id, s]));
+
+    /** Поля живого борда переносятся ЦЕЛИКОМ, включая отсутствие error:
+     *  починившийся борд не должен носить прежнюю ошибку вечно. */
+    const meta = (b: BoardMeta, s: { name: string; writable?: boolean; error?: string }) => {
+      const next: BoardMeta = { ...b, name: s.name, writable: s.writable ?? false };
+      delete next.sourceError;
+      if (s.error) next.sourceError = s.error;
+      return next;
+    };
+
+    // Пользовательские и review-вкладки живут своей жизнью: список живых
+    // бордов не имеет права их трогать.
+    const kept = prev.filter((b) => b.kind !== 'file' || wanted.has(b.sourceId ?? ''));
+    const renamed = kept.map((b) =>
+      b.kind === 'file' && b.sourceId && wanted.has(b.sourceId)
+        ? meta(b, wanted.get(b.sourceId)!)
+        : b,
+    );
+    const present = new Set(renamed.filter((b) => b.kind === 'file').map((b) => b.sourceId));
+    const added: BoardMeta[] = deduped
+      .filter((s) => !present.has(s.id))
+      .map((s) =>
+        meta(
+          { id: `b-${crypto.randomUUID()}`, name: s.name, kind: 'file', sourceId: s.id },
+          s,
+        ),
+      );
+
+    const boards = [...renamed, ...added];
+    if (boards.length === prev.length && added.length === 0) {
+      const same = boards.every(
+        (b, i) =>
+          b.name === prev[i].name &&
+          b.writable === prev[i].writable &&
+          b.sourceError === prev[i].sourceError,
+      );
+      if (same) return; // ничего не изменилось — не дёргаем подписчиков
+    }
+
+    // activeBoardId не имеет права указывать на снесённую вкладку. Присвоить
+    // ей id выжившего борда напрямую НЕЛЬЗЯ: контент грузится только внутри
+    // switchBoard, а useAutosave сохранит граф исчезнувшего борда под чужим
+    // ключом. Поэтому — '' вместе со списком (тот же часовой, что и в
+    // switchBoard: `if (activeBoardId && ...)` — пустая строка ложна ровно
+    // так же, как null, поэтому switchBoard пропустит сохранение
+    // исчезнувшего файлового борда) и штатный переход отдельным вызовом.
+    if (get().activeBoardId && !boards.some((b) => b.id === get().activeBoardId)) {
+      const next = boards[0]?.id ?? '';
+      set({ boards, activeBoardId: '' });
+      void saveBoardsRegistry({ boards, activeBoardId: '' });
+      if (next) void get().switchBoard(next);
+      return;
+    }
+
     set({ boards });
     void saveBoardsRegistry({ boards, activeBoardId: get().activeBoardId });
-    return id;
   },
     }),
     {
