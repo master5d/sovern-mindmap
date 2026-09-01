@@ -162,15 +162,26 @@ describe('useBoardSync × много живых бордов', () => {
     cleanup();
   });
 
-  it('борд с error не роняет соседей и не выдаёт себя за пустой', async () => {
-    stubFetch(
+  it('борд с error не роняет соседей, не выдаёт себя за пустой и не запрашивает тело', async () => {
+    // Ошибочный борд — АКТИВНАЯ вкладка: иначе multi-board-safety-гейт
+    // возвращается раньше, чем выполнение доходит до ветки `target.error`,
+    // и она остаётся непроверенной ничем (см. находку ревью C3).
+    useWorkflowStore.getState().initBoards({
+      boards: [{ id: 'b-live', name: 'live', kind: 'file', sourceId: 'aaa' }],
+      activeBoardId: 'b-live',
+    });
+    const calls = stubFetch(
       [{ ...INDEX[0], error: 'файл недоступен' }, INDEX[1]],
       {},
     );
     const cleanup = await mountAndSettle();
     const file = useWorkflowStore.getState().boards.filter((b) => b.kind === 'file');
     expect(file).toHaveLength(2);
+    const bodyCalls = calls.filter((u) => u.startsWith('/board/'));
+    expect(bodyCalls).toHaveLength(0); // error — это не «пустой», тело не запрашиваем
+    expect(useWorkflowStore.getState().nodes).toHaveLength(0); // и граф не тронут
     cleanup();
+    useWorkflowStore.getState().initBoards({ boards: [], activeBoardId: '' });
   });
 
   it('неизменившийся mtime — второй тик не перечитывает борд заново', async () => {
@@ -201,6 +212,217 @@ describe('useBoardSync × много живых бордов', () => {
       });
       const afterSecond = calls.filter((u) => u.startsWith('/board/')).length;
       expect(afterSecond).toBe(1);
+
+      act(() => root.unmount());
+      container.remove();
+    } finally {
+      vi.useRealTimers();
+      useWorkflowStore.getState().initBoards({ boards: [], activeBoardId: '' });
+    }
+  });
+
+  it('переключение активной вкладки, пока грузится тело, не даёт чужому контенту сесть на новую активную (C1)', async () => {
+    useWorkflowStore.getState().initBoards({
+      boards: [
+        { id: 'b-1', name: 'Main', kind: 'user' },
+        { id: 'b-live', name: 'live', kind: 'file', sourceId: 'aaa' },
+      ],
+      activeBoardId: 'b-live',
+    });
+
+    let resolveBody: (() => void) | null = null;
+    const bodyGate = new Promise<void>((res) => {
+      resolveBody = res;
+    });
+    const calls: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        calls.push(url);
+        if (url.startsWith('/api/boards')) {
+          return { ok: true, text: async () => JSON.stringify(INDEX) };
+        }
+        if (url.startsWith('/board/aaa')) {
+          await bodyGate; // застреваем здесь, пока тест сам не отпустит
+        }
+        return { ok: true, text: async () => CANVAS_TEXT };
+      }),
+    );
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    act(() => root.render(createElement(Probe)));
+
+    // Дать тику дойти до fetch('/board/aaa.canvas') и застрять на bodyGate.
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(calls.some((u) => u.startsWith('/board/aaa'))).toBe(true);
+
+    // Пока тело летит — пользователь переключается на пользовательскую доску.
+    useWorkflowStore.setState({ activeBoardId: 'b-1' });
+
+    // Теперь отпускаем тело живого борда 'aaa'.
+    await act(async () => {
+      resolveBody!();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    // 'aaa' не должен был сесть на текущую (уже другую) активную вкладку.
+    expect(useWorkflowStore.getState().nodes).toHaveLength(0);
+
+    act(() => root.unmount());
+    container.remove();
+    useWorkflowStore.getState().initBoards({ boards: [], activeBoardId: '' });
+  });
+
+  it('борд, ставший битым ПОСЛЕ успешного применения, не застревает на битой версии — тик пробует снова (C2)', async () => {
+    // Сценарий специально НЕ «первый тик сразу битый» — там применённого
+    // ранее нет, и деинвалидация lastRenderedTabId (C5) сама вынудит повтор
+    // независимо от того, где стоит applied.set. Настоящий риск C2 — когда
+    // борд УЖЕ был успешно применён, потом обновился до новой битой версии:
+    // если applied.set стоит до парсинга, кэш поверит, что новый (битый)
+    // mtime уже применён, и следующий тик с тем же битым mtime не станет
+    // перечитывать вообще.
+    useWorkflowStore.getState().initBoards({
+      boards: [{ id: 'b-live', name: 'live', kind: 'file', sourceId: 'aaa' }],
+      activeBoardId: 'b-live',
+    });
+
+    let mtime = 1;
+    let corrupt = false;
+    const bodyCalls: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url.startsWith('/api/boards')) {
+          return {
+            ok: true,
+            text: async () => JSON.stringify([{ ...INDEX[0], mtime }, INDEX[1]]),
+          };
+        }
+        if (url.startsWith('/board/aaa')) {
+          bodyCalls.push(url);
+          return { ok: true, text: async () => (corrupt ? '{не json' : CANVAS_TEXT) };
+        }
+        return { ok: true, text: async () => CANVAS_TEXT };
+      }),
+    );
+
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const container = document.createElement('div');
+      document.body.appendChild(container);
+      const root = createRoot(container);
+      act(() => root.render(createElement(Probe)));
+
+      // Тик 1: mtime=1, тело исправно — применяется.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(bodyCalls).toHaveLength(1);
+      expect(useWorkflowStore.getState().nodes.length).toBeGreaterThan(0);
+
+      // Файл обновился и стал битым.
+      mtime = 2;
+      corrupt = true;
+
+      // Тик 2 (задержка после успеха = POLL_MS): mtime сменился — перечитывает,
+      // тело битое, JSON.parse бросает.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(POLL_MS);
+      });
+      const afterCorruptTick = bodyCalls.length;
+      expect(afterCorruptTick).toBe(2);
+
+      // Тик 3 (задержка после ошибки удваивается: POLL_MS*2): файл всё ещё
+      // на том же битом mtime=2 — если applied помечен ДО парсинга, кэш решит,
+      // что mtime=2 уже применён, и тело больше не запросится.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(POLL_MS * 2);
+      });
+      const afterThirdTick = bodyCalls.length;
+      expect(afterThirdTick).toBeGreaterThan(afterCorruptTick);
+
+      act(() => root.unmount());
+      container.remove();
+    } finally {
+      vi.useRealTimers();
+      useWorkflowStore.getState().initBoards({ boards: [], activeBoardId: '' });
+    }
+  });
+
+  it('во время isEditing список живых вкладок не меняется, после выхода — подхватывается (C4)', async () => {
+    stubFetch(INDEX, {});
+    useWorkflowStore.getState().enterEditMode();
+
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const container = document.createElement('div');
+      document.body.appendChild(container);
+      const root = createRoot(container);
+      act(() => root.render(createElement(Probe)));
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(useWorkflowStore.getState().boards.filter((b) => b.kind === 'file')).toHaveLength(0);
+
+      useWorkflowStore.getState().exitEditMode();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(POLL_MS);
+      });
+      const file = useWorkflowStore.getState().boards.filter((b) => b.kind === 'file');
+      expect(file.map((b) => b.sourceId)).toEqual(['aaa', 'bbb']);
+
+      act(() => root.unmount());
+      container.remove();
+    } finally {
+      vi.useRealTimers();
+      // Гарантия против утечки isEditing в следующие тесты, даже если один
+      // из assert'ов выше бросил раньше штатного exitEditMode().
+      useWorkflowStore.getState().exitEditMode();
+    }
+  });
+
+  it('возврат на неизменившуюся живую вкладку перечитывает её содержимое заново (C5)', async () => {
+    useWorkflowStore.getState().initBoards({
+      boards: [
+        { id: 'b-1', name: 'Main', kind: 'user' },
+        { id: 'b-live', name: 'live', kind: 'file', sourceId: 'aaa' },
+      ],
+      activeBoardId: 'b-live',
+    });
+    stubFetch(INDEX, {}); // mtime 'aaa' не меняется на протяжении теста
+
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const container = document.createElement('div');
+      document.body.appendChild(container);
+      const root = createRoot(container);
+      act(() => root.render(createElement(Probe)));
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(useWorkflowStore.getState().nodes.length).toBeGreaterThan(0);
+
+      // Уходим на пользовательскую доску: живой борд не персистится, обычный
+      // switchBoard на его месте загрузил бы null-контент и очистил холст —
+      // здесь это симулируется напрямую, чтобы не тянуть Tauri/appData слой.
+      useWorkflowStore.setState({ activeBoardId: 'b-1', nodes: [], edges: [] });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(POLL_MS);
+      });
+
+      // Возвращаемся на ту же живую вкладку — mtime 'aaa' всё ещё тот же.
+      useWorkflowStore.setState({ activeBoardId: 'b-live' });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(POLL_MS);
+      });
+
+      expect(useWorkflowStore.getState().nodes.length).toBeGreaterThan(0);
 
       act(() => root.unmount());
       container.remove();
