@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:lab": "node scripts/dev-lab.mjs",
     "build": "tsc && vite build",
     "build:mcp": "tsc -p tsconfig.mcp.json",
     "preview": "vite preview",
