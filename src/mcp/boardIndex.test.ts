@@ -220,4 +220,28 @@ describe('readBoardIndex', () => {
     expect(second.error).toBeTruthy();
     expect(second.name).toBe('broken-cached');
   });
+
+  it('size на ветке кэш-хита — настоящий размер файла, а не 0 (F3, вторая доза)', () => {
+    // Второе чтение ОДНОГО и того же борда БЕЗ clearBoardNameCache между
+    // ними обязано прийти из кэша (см. соседний тест на error) — и size
+    // обязан остаться реальным на этой ветке тоже. Это горячий путь: индекс
+    // отдаётся из кэша на КАЖДОМ тике опроса клиента, а клиент ключует
+    // «применено» парой (mtime, size) — той же, которой сервер кэширует
+    // разбор (см. stamp() в src/hooks/useBoardSync.ts). Уронить size здесь —
+    // значит заставить клиентский штамп скакать между настоящим значением и
+    // нулём на каждом втором тике: новое имя, старое содержимое.
+    const p = join(dir, 'cache-hit-size.canvas');
+    const text = board([], { 'desops:title': 'Кэш' });
+    const realSize = Buffer.byteLength(text, 'utf8');
+    writeFileSync(p, text, 'utf8');
+
+    const first = readBoardIndex([p])[0];
+    expect(first.size).toBe(realSize);
+
+    // Второе чтение того же пути, БЕЗ clearBoardNameCache: mtime и size не
+    // менялись — это ветка кэш-хита.
+    const second = readBoardIndex([p])[0];
+    expect(second.size).toBe(realSize);
+    expect(second.size).not.toBe(0);
+  });
 });

@@ -38,6 +38,15 @@ async function mountAndSettle() {
 describe('useBoardSync × boards registry gate', () => {
   beforeEach(() => {
     localStorage.clear();
+    // boards/activeBoardId/boardsReady сбрасывать ОБЯЗАТЕЛЬНО, тем же
+    // набором, что у соседнего describe («много живых бордов») — иначе
+    // порядок-зависимость: сосед зовёт initBoards(...), который оставляет
+    // boardsReady: true и непустой boards, и следующий тест ЭТОГО блока
+    // (например «keeps the legacy first-apply for fresh installs without a
+    // registry») наследует чужой boardsReady при перемешанном порядке
+    // тестов — ровно то, что было объявлено закрытым, но чинилось только в
+    // одном из двух beforeEach (F6).
+    useWorkflowStore.setState({ boards: [], activeBoardId: '', boardsReady: false });
     useWorkflowStore.getState().setNodes([]);
     useWorkflowStore.getState().setEdges([]);
     vi.stubGlobal(
@@ -629,5 +638,37 @@ describe('useBoardSync × много живых бордов', () => {
       vi.useRealTimers();
       useWorkflowStore.getState().initBoards({ boards: [], activeBoardId: '' });
     }
+  });
+
+  it('размонтирование отписывается от activeBoardId — заслон не декоративен', async () => {
+    // Прямая проверка cleanup'а: подписка на смену активной вкладки (см.
+    // комментарий у lastRenderedTabId в useBoardSync.ts) обязана сниматься
+    // строго в cleanup эффекта. Оборачиваем subscribe шпионом, чтобы
+    // поймать САМ вызов возвращённой unsubscribe-функции — если строку
+    // `unsubscribe();` в cleanup убрать, эта отписка не произойдёт, а весь
+    // остальной сьют (включая тесты выше) останется зелёным, потому что
+    // после unmount таймер и так очищен и новых fetch не будет независимо
+    // от того, снята подписка или нет.
+    const realSubscribe = useWorkflowStore.subscribe.bind(useWorkflowStore);
+    const unsubSpy = vi.fn();
+    const subscribeSpy = vi
+      .spyOn(useWorkflowStore, 'subscribe')
+      .mockImplementationOnce((listener: Parameters<typeof realSubscribe>[0]) => {
+        const unsub = realSubscribe(listener);
+        return () => {
+          unsubSpy();
+          unsub();
+        };
+      });
+
+    stubFetch(INDEX, {});
+    const cleanup = await mountAndSettle();
+    expect(subscribeSpy).toHaveBeenCalledTimes(1);
+    expect(unsubSpy).not.toHaveBeenCalled();
+
+    cleanup();
+    expect(unsubSpy).toHaveBeenCalledTimes(1);
+
+    subscribeSpy.mockRestore();
   });
 });
