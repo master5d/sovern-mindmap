@@ -3,7 +3,7 @@
 // разбор конфигурации.
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import { boardSourceId, normalizeBoardPath } from './boardSources';
+import { boardSourceId, normalizeBoardPath } from './boardSources.js';
 
 export interface BoardSource {
   id: string;

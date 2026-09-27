@@ -34,12 +34,12 @@ import {
 import { dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { JSONCanvas, JSONCanvasNode, JSONCanvasEdge } from '../types/index.js';
-import { resolveBoardPaths, normalizeBoardPath, DEFAULT_BOARD_PATH } from './boardSources';
-import { readBoardIndex } from './boardIndex';
+import { resolveBoardPaths, normalizeBoardPath, DEFAULT_BOARD_PATH } from './boardSources.js';
+import { readBoardIndex } from './boardIndex.js';
 
 // Константа больше не живёт здесь второй копией: единственное объявление —
 // в boardSources, откуда её читают и конфиг, и этот модуль.
-export { DEFAULT_BOARD_PATH } from './boardSources';
+export { DEFAULT_BOARD_PATH } from './boardSources.js';
 
 /** Куда пишет MCP. Живых бордов может быть много, но ПИШУЩАЯ полоса одна:
  *  артефакты дизайн-ревью обязаны ехать в неё, а не в производный борд,
