@@ -54,6 +54,18 @@
   --layer-workers: #f59e0b;
   --layer-course: #84cc16;
   --layer-infra: #64748b;
+
+  /* Грейды достоверности (evidence marks) — мост из NAUTILUS
+     core/desops/dataviz. Значения = --plate-mark-* (дефолт/тёмная тема) в
+     NAUTILUS docs/atlas/atlas-plate.tokens.css, не изобретены здесь: та же
+     таблица примитивов, скопированная в токены этого репо (порядок ступеней
+     и источник — src/utils/evidenceMarks.ts). */
+  --mark-measured: #6fa8dc;
+  --mark-reported: #e8d5a0;
+  --mark-declared: #96792c;
+  --mark-inferred: #c9a227;
+  --mark-open: #9a9079;
+  --mark-refuted: #b4553a;
 }
 
 /* Чистая профессиональная светлая тема: те же hue, плотность 600-700
@@ -105,4 +117,12 @@
   --layer-workers: #d97706;
   --layer-course: #65a30d;
   --layer-infra: #64748b;
+
+  /* Те же грейды, светлая раскладка NAUTILUS (atlas-plate.tokens.css, light). */
+  --mark-measured: #2f5f8f;
+  --mark-reported: #5c4514;
+  --mark-declared: #7d5f21;
+  --mark-inferred: #8a6a12;
+  --mark-open: #6d6046;
+  --mark-refuted: #8a3a24;
 }

@@ -22,6 +22,7 @@ import {
   saveBoardsRegistry,
 } from '../utils/persistence';
 import { artifactTombstonePayloads, postArtifactTombstones } from '../hooks/artifactTombstones';
+import { DEFAULT_MARK_THRESHOLD, isHiddenByMarkFilter } from '../utils/evidenceMarks';
 
 export type ViewMode = 'mindmap' | 'diagram' | 'matrix' | 'timeline' | 'kanban' | 'outline';
 export type DiagramLayout = 'tree' | 'lanes';
@@ -109,6 +110,11 @@ interface WorkflowState {
   triggerWebhook: (nodeId: string, eventType: string) => void;
   collapsedIds: string[];
   toggleCollapse: (id: string) => void;
+  // ── Грейд достоверности (evidence marks, мост NAUTILUS core/desops/dataviz) ──
+  markThreshold: string;
+  markShowRefuted: boolean;
+  setMarkThreshold: (id: string) => void;
+  setMarkShowRefuted: (on: boolean) => void;
   clipboard: { nodes: Node<SOVERNNodeData>[]; edges: Edge[]; rootId: string } | null;
   copySubtree: (id: string) => void;
   pasteSubtree: (targetParentId?: string) => void;
@@ -368,6 +374,10 @@ export const useWorkflowStore = create<WorkflowState>()(
     set0.has(id) ? set0.delete(id) : set0.add(id);
     set({ collapsedIds: [...set0] });
   },
+  markThreshold: DEFAULT_MARK_THRESHOLD,
+  markShowRefuted: false,
+  setMarkThreshold: (id) => set({ markThreshold: id }),
+  setMarkShowRefuted: (on) => set({ markShowRefuted: on }),
   clipboard: null,
   copySubtree: (id) => {
     const { nodes, edges, rootId } = cloneSubtree(id, get().nodes, get().edges);
@@ -601,6 +611,30 @@ export function selectVisibleEdges(s: { nodes: any[]; edges: any[]; collapsedIds
   return s.edges.map((e) =>
     hidden.has(e.source) || hidden.has(e.target) ? { ...e, hidden: true } : e.hidden ? { ...e, hidden: false } : e,
   );
+}
+
+/**
+ * Порог «скрыть слабее X» + отдельный переключатель `refuted` (мост NAUTILUS
+ * core/desops/dataviz: тот же контракт, что у CSS-фильтра `render/html.js`).
+ * ДОБАВЛЯЕТ `hidden`, никогда не снимает — вызывается на выходе
+ * `selectVisibleNodes`/`selectVisibleEdges`, и складка (fold) не должна
+ * ожить, если марка сама по себе видима. Каждый элемент прячется по СВОЕЙ
+ * марке: ребро — по марке ребра, не по узлам на концах (они сюда даже не
+ * передаются). Не размеченный элемент порог не трогает вовсе.
+ */
+export function applyMarkVisibility<T extends { data?: any; hidden?: boolean }>(
+  items: T[],
+  markThreshold: string,
+  markShowRefuted: boolean,
+): T[] {
+  let changed = false;
+  const next = items.map((it) => {
+    if (it.hidden) return it; // уже скрыт другой причиной — не наша забота
+    if (!isHiddenByMarkFilter(it.data?.mark, markThreshold, markShowRefuted)) return it;
+    changed = true;
+    return { ...it, hidden: true };
+  });
+  return changed ? next : items;
 }
 
 /**
