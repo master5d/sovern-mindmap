@@ -18,7 +18,9 @@ import { ReadingToggle } from './components/ReadingToggle';
 import { TokenUpload } from './components/TokenUpload';
 import { useThemeStore } from './store/useThemeStore';
 import { useWorkflowStore, ViewMode } from './store/useWorkflowStore';
-import { selectVisibleNodes, selectVisibleEdges, selectLearnOrder, selectVisibleUpToStep } from './store/useWorkflowStore';
+import { selectVisibleNodes, selectVisibleEdges, selectLearnOrder, selectVisibleUpToStep, applyMarkVisibility } from './store/useWorkflowStore';
+import { markColorVar, isKnownMark } from './utils/evidenceMarks';
+import { EvidenceMarkPanel } from './components/EvidenceMarkPanel';
 import { SOVERNNode } from './components/nodes/SOVERNNode';
 import { LaneNode } from './components/nodes/LaneNode';
 import { ShapeNode } from './components/nodes/ShapeNode';
@@ -107,6 +109,7 @@ function Flow() {
     viewMode, setViewMode, isSyncing,
     diagramLayout, setDiagramLayout, presentationMode, setPresentationMode,
     learnMode, enterLearnMode, learnStep, addShapeNode,
+    markThreshold, markShowRefuted, setMarkThreshold, setMarkShowRefuted,
   } = useWorkflowStore();
 
   const resolved = useThemeStore((s) => s.resolved);
@@ -243,8 +246,16 @@ function Flow() {
       : edges;
 
   const collapsedIds = useWorkflowStore((s) => s.collapsedIds);
-  const visibleNodes = selectVisibleNodes({ nodes, edges, collapsedIds });
-  const visibleDisplayEdges = selectVisibleEdges({ nodes, edges: displayEdges, collapsedIds });
+  const foldVisibleNodes = selectVisibleNodes({ nodes, edges, collapsedIds });
+  const foldVisibleEdges = selectVisibleEdges({ nodes, edges: displayEdges, collapsedIds });
+  // Грейд достоверности (мост NAUTILUS core/desops/dataviz): порог прячет
+  // ПОВЕРХ fold — своя причина, своя марка, ребро по своей, не по узлам концов.
+  const visibleNodes = applyMarkVisibility(foldVisibleNodes, markThreshold, markShowRefuted);
+  const visibleDisplayEdges = applyMarkVisibility(foldVisibleEdges, markThreshold, markShowRefuted).map((e) => {
+    const mark = e.data?.mark;
+    return isKnownMark(mark) ? { ...e, style: { ...e.style, stroke: markColorVar(mark) } } : e;
+  });
+  const hasAnyMark = nodes.some((n) => isKnownMark(n.data?.mark)) || edges.some((e) => isKnownMark(e.data?.mark));
 
   // Learn order must ignore lane backgrounds (they have in-degree 0 → would rank as roots and
   // pollute the step sequence). This also matches exportLearnHtml, which passes lane-filtered
@@ -424,6 +435,16 @@ function Flow() {
       )}
 
       {viewMode === 'mindmap' && !presentationMode && !learnMode && <ShapeLibrary onPick={addShapeAtCenter} />}
+      {isCanvasView && hasAnyMark && !presentationMode && !learnMode && (
+        <EvidenceMarkPanel
+          nodes={nodes}
+          edges={edges}
+          threshold={markThreshold}
+          showRefuted={markShowRefuted}
+          onThresholdChange={setMarkThreshold}
+          onShowRefutedChange={setMarkShowRefuted}
+        />
+      )}
       {selectedNodeId && !learnMode && <NodeSidebar />}
       {learnMode && <LearnControls />}
       {notice && (

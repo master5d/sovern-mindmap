@@ -1,5 +1,6 @@
 import type { Node, Edge } from '@xyflow/react';
 import type { JSONCanvas, JSONCanvasNode, JSONCanvasEdge, SOVERNNodeData, ArtifactNodeData } from '../types/index.js';
+import { isKnownMark } from './evidenceMarks.js';
 
 /**
  * Converts React Flow nodes and edges to Obsidian-compatible JSON Canvas format.
@@ -55,15 +56,23 @@ export const toJSONCanvas = (nodes: Node<SOVERNNodeData>[], edges: Edge[]): JSON
     if (typeof data.step === 'number') canvasNode.metadata!['mm:step'] = data.step;
     if (typeof data.note === 'string' && data.note) canvasNode.metadata!['mm:note'] = data.note;
     if (data.color) canvasNode.color = data.color;
+    // Грейд достоверности (мост NAUTILUS core/desops/dataviz): не размечено ≠
+    // значению — поле пишем только когда марка известна шкале, не дефолтом.
+    if (isKnownMark(data.mark)) canvasNode.metadata!['sovern:mark'] = data.mark;
     return canvasNode;
   });
 
-  const canvasEdges: JSONCanvasEdge[] = edges.map((edge) => ({
-    id: edge.id,
-    fromNode: edge.source,
-    toNode: edge.target,
-    label: edge.label as string,
-  }));
+  const canvasEdges: JSONCanvasEdge[] = edges.map((edge) => {
+    const mark = (edge.data as Record<string, unknown> | undefined)?.mark;
+    const canvasEdge: JSONCanvasEdge = {
+      id: edge.id,
+      fromNode: edge.source,
+      toNode: edge.target,
+      label: edge.label as string,
+    };
+    if (isKnownMark(mark)) canvasEdge.metadata = { 'sovern:mark': mark };
+    return canvasEdge;
+  });
 
   return {
     nodes: canvasNodes,
@@ -96,6 +105,11 @@ export const fromJSONCanvas = (canvas: JSONCanvas): { nodes: Node<SOVERNNodeData
       };
       return artifactNode as unknown as Node<SOVERNNodeData>;
     }
+    // Грейд достоверности читаем строкой из sovern:mark, а не дефолтом: узел без
+    // поля (или с чужой/опечатанной маркой) обязан остаться «не размечено», как
+    // на исходном blueprint (NAUTILUS render/svg.js — тот же принцип).
+    const rawMark = node.metadata?.['sovern:mark'];
+    const mark = isKnownMark(rawMark) ? rawMark : undefined;
     const shape = node.metadata?.['mm:shape'];
     if (shape) {
       return {
@@ -108,6 +122,7 @@ export const fromJSONCanvas = (canvas: JSONCanvas): { nodes: Node<SOVERNNodeData
           status: node.metadata?.['sovern:status'] || 'idle',
           shape,
           color: node.color,
+          mark,
           step: typeof node.metadata?.['mm:step'] === 'number' ? node.metadata['mm:step'] : undefined,
           note: typeof node.metadata?.['mm:note'] === 'string' ? node.metadata['mm:note'] : undefined,
         },
@@ -129,18 +144,24 @@ export const fromJSONCanvas = (canvas: JSONCanvas): { nodes: Node<SOVERNNodeData
         created: node.metadata?.['sovern:created'],
         feedback: node.metadata?.['feedback'],
         color: node.color,
+        mark,
         step: typeof node.metadata?.['mm:step'] === 'number' ? node.metadata['mm:step'] : undefined,
         note: typeof node.metadata?.['mm:note'] === 'string' ? node.metadata['mm:note'] : undefined,
       },
     };
   });
 
-  const edges: Edge[] = canvas.edges.map((edge) => ({
-    id: edge.id,
-    source: edge.fromNode,
-    target: edge.toNode,
-    label: edge.label,
-  }));
+  const edges: Edge[] = canvas.edges.map((edge) => {
+    const rawMark = edge.metadata?.['sovern:mark'];
+    const mark = isKnownMark(rawMark) ? rawMark : undefined;
+    return {
+      id: edge.id,
+      source: edge.fromNode,
+      target: edge.toNode,
+      label: edge.label,
+      ...(mark ? { data: { mark } } : {}),
+    };
+  });
 
   return { nodes, edges };
 };

@@ -5,6 +5,7 @@ import { SOVERNNodeData } from '../../types';
 import { layerColor } from '../../utils/feedback';
 import { useWorkflowStore } from '../../store/useWorkflowStore';
 import { getChildren, getDescendants } from '../../utils/tree';
+import { isKnownMark, markColorVar, markGlyph } from '../../utils/evidenceMarks';
 
 export const SOVERNNode = ({ id, data, selected }: NodeProps<{ data: SOVERNNodeData } & any>) => {
   const accentColor = layerColor(data.layer);
@@ -52,11 +53,24 @@ export const SOVERNNode = ({ id, data, selected }: NodeProps<{ data: SOVERNNodeD
           <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: accentColor }}>
             {data.layer}
           </span>
-          <div
-            className={`w-2.5 h-2.5 rounded-full shadow-lg ${data.status === 'active' ? 'animate-pulse' : ''}`}
-            style={{ backgroundColor: `var(--status-${data.status}, var(--status-idle))` }}
-            title={`Status: ${data.status}`}
-          />
+          <div className="flex items-center gap-1.5">
+            {/* Грейд достоверности (мост NAUTILUS core/desops/dataviz) — глиф-бейдж,
+                не размеченный узел не рисуется НИКАК (не measured/●, не пустышка). */}
+            {isKnownMark(data.mark) && (
+              <span
+                className="text-xs leading-none"
+                style={{ color: markColorVar(data.mark) }}
+                title={`Evidence grade: ${data.mark}`}
+              >
+                {markGlyph(data.mark)}
+              </span>
+            )}
+            <div
+              className={`w-2.5 h-2.5 rounded-full shadow-lg ${data.status === 'active' ? 'animate-pulse' : ''}`}
+              style={{ backgroundColor: `var(--status-${data.status}, var(--status-idle))` }}
+              title={`Status: ${data.status}`}
+            />
+          </div>
         </div>
 
         {/* Title — clamp, иначе тикеты раздувают карту */}

@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { Node } from '@xyflow/react';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath, URL as NodeURL } from 'node:url';
+import { Node, Edge } from '@xyflow/react';
 import { toJSONCanvas, fromJSONCanvas } from './canvasConverter';
 import { SOVERNNodeData, JSONCanvas } from '../types';
+import { MARK_IDS } from './evidenceMarks';
 
 const shapeNode = (): Node<SOVERNNodeData> => ({
   id: 's1', type: 'shape', position: { x: 10, y: 20 },
@@ -175,5 +178,141 @@ describe('canvasConverter mm:artifact', () => {
     const { nodes } = fromJSONCanvas(canvas);
     expect(nodes[0].type).toBe('sovern');
     expect(nodes[0].data.layer).toBe('coding');
+  });
+});
+
+describe('canvasConverter sovern:mark (грейд достоверности, мост NAUTILUS core/desops/dataviz)', () => {
+  it('fromJSONCanvas читает известную марку узла в data.mark', () => {
+    const canvas: JSONCanvas = {
+      nodes: [{ id: 'n1', type: 'text', x: 0, y: 0, width: 150, height: 60, text: 'A', metadata: { 'sovern:mark': 'measured' } }],
+      edges: [],
+    };
+    const { nodes } = fromJSONCanvas(canvas);
+    expect(nodes[0].data.mark).toBe('measured');
+  });
+
+  it('отсутствие sovern:mark — data.mark undefined, а не measured/дефолт', () => {
+    const canvas: JSONCanvas = {
+      nodes: [{ id: 'n1', type: 'text', x: 0, y: 0, width: 150, height: 60, text: 'A', metadata: {} }],
+      edges: [],
+    };
+    const { nodes } = fromJSONCanvas(canvas);
+    expect(nodes[0].data.mark).toBeUndefined();
+  });
+
+  it('неизвестное значение sovern:mark (опечатка) — тоже «не размечено», не падение', () => {
+    const canvas: JSONCanvas = {
+      nodes: [{ id: 'n1', type: 'text', x: 0, y: 0, width: 150, height: 60, text: 'A', metadata: { 'sovern:mark': 'вроде-измерено' } }],
+      edges: [],
+    };
+    const { nodes } = fromJSONCanvas(canvas);
+    expect(nodes[0].data.mark).toBeUndefined();
+  });
+
+  it('toJSONCanvas пишет metadata["sovern:mark"] только когда марка известна', () => {
+    const marked: Node<SOVERNNodeData> = {
+      id: 'n1', type: 'sovern', position: { x: 0, y: 0 },
+      data: { label: 'A', layer: 'projects', status: 'idle', mark: 'inferred' },
+    };
+    const unmarked: Node<SOVERNNodeData> = {
+      id: 'n2', type: 'sovern', position: { x: 0, y: 0 },
+      data: { label: 'B', layer: 'projects', status: 'idle' },
+    };
+    const c = toJSONCanvas([marked, unmarked], []);
+    expect(c.nodes[0].metadata?.['sovern:mark']).toBe('inferred');
+    expect(c.nodes[1].metadata && 'sovern:mark' in c.nodes[1].metadata).toBe(false);
+  });
+
+  it('round-trips марку узла через оба конца конвертера', () => {
+    const node: Node<SOVERNNodeData> = {
+      id: 'n1', type: 'sovern', position: { x: 0, y: 0 },
+      data: { label: 'A', layer: 'projects', status: 'idle', mark: 'declared' },
+    };
+    const c = toJSONCanvas([node], []);
+    const { nodes } = fromJSONCanvas(c);
+    expect(nodes[0].data.mark).toBe('declared');
+  });
+
+  it('ребро несёт СВОЮ марку, независимо от узлов на концах', () => {
+    const canvas: JSONCanvas = {
+      nodes: [
+        { id: 'a', type: 'text', x: 0, y: 0, width: 150, height: 60, text: 'A', metadata: {} },
+        { id: 'b', type: 'text', x: 0, y: 0, width: 150, height: 60, text: 'B', metadata: { 'sovern:mark': 'measured' } },
+      ],
+      edges: [{ id: 'e', fromNode: 'a', toNode: 'b', metadata: { 'sovern:mark': 'refuted' } }],
+    };
+    const { edges } = fromJSONCanvas(canvas);
+    expect((edges[0].data as any)?.mark).toBe('refuted');
+  });
+
+  it('ребро без sovern:mark — data вообще не заводится (обратная совместимость)', () => {
+    const canvas: JSONCanvas = {
+      nodes: [
+        { id: 'a', type: 'text', x: 0, y: 0, width: 150, height: 60, text: 'A', metadata: {} },
+        { id: 'b', type: 'text', x: 0, y: 0, width: 150, height: 60, text: 'B', metadata: {} },
+      ],
+      edges: [{ id: 'e', fromNode: 'a', toNode: 'b', label: 'flow' }],
+    };
+    const { edges } = fromJSONCanvas(canvas);
+    expect(edges[0].data).toBeUndefined();
+    expect(edges[0].label).toBe('flow');
+  });
+
+  it('round-trips марку ребра', () => {
+    const nodes: Node<SOVERNNodeData>[] = [
+      { id: 'a', type: 'sovern', position: { x: 0, y: 0 }, data: { label: 'A', layer: 'projects', status: 'idle' } },
+      { id: 'b', type: 'sovern', position: { x: 0, y: 0 }, data: { label: 'B', layer: 'projects', status: 'idle' } },
+    ];
+    const edges: Edge[] = [{ id: 'e', source: 'a', target: 'b', data: { mark: 'open' } }];
+    const c = toJSONCanvas(nodes, edges);
+    expect(c.edges[0].metadata?.['sovern:mark']).toBe('open');
+    const back = fromJSONCanvas(c);
+    expect((back.edges[0].data as any)?.mark).toBe('open');
+  });
+
+  describe('фикстура: llm-request-chain.canvas (мост NAUTILUS, после правки render/canvas.js)', () => {
+    const fixture: JSONCanvas = JSON.parse(
+      readFileSync(fileURLToPath(new NodeURL('./fixtures/llm-request-chain.canvas', import.meta.url)), 'utf8'),
+    );
+
+    it('фикстура несёт desops:derived — не нарисована руками', () => {
+      expect(fixture.metadata?.['desops:derived']).toMatch(/generator=dataviz\/causal-chain/);
+    });
+
+    it('все 10 звеньев читаются с их марками (перенесены из chain-timeline.example.json)', () => {
+      const { nodes } = fromJSONCanvas(fixture);
+      const marks: Record<string, string | undefined> = {};
+      nodes.forEach((n) => { marks[n.id] = n.data.mark; });
+      expect(marks).toEqual({
+        call: 'open',
+        gateway: 'open',
+        pool: 'declared',
+        'provider-direct': 'measured',
+        'floor-warm': 'measured',
+        'provider-gateway': 'measured',
+        'floor-cache': 'measured',
+        'floor-work': 'measured',
+        'floor-cold': 'measured',
+        'fallback-worst': 'inferred',
+      });
+      // Ни одна марка не выдумана мимо схемы — все входят в канон.
+      Object.values(marks).forEach((m) => expect(MARK_IDS).toContain(m));
+    });
+
+    it('ни у одного ребра фикстуры нет mark (жанр causal-chain марку на ребро не ставит)', () => {
+      const { edges } = fromJSONCanvas(fixture);
+      expect(edges.every((e) => (e.data as any)?.mark === undefined)).toBe(true);
+      expect(edges.length).toBeGreaterThan(0);
+    });
+
+    it('round-trip фикстуры через оба конца конвертера не теряет ни одной марки', () => {
+      const { nodes, edges } = fromJSONCanvas(fixture);
+      const back = toJSONCanvas(nodes, edges);
+      const byId = new Map(fixture.nodes.map((n) => [n.id, n]));
+      for (const n of back.nodes) {
+        const original = byId.get(n.id)!;
+        expect(n.metadata?.['sovern:mark']).toBe(original.metadata?.['sovern:mark']);
+      }
+    });
   });
 });

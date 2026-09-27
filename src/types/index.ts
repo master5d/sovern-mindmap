@@ -65,7 +65,8 @@ export interface SOVERNNodeData {
   impact?: number;   // 1-10, Priority Matrix Y
   urgency?: number;  // 1-10, Priority Matrix X
   created?: string;  // ISO-дата создания тикета (timeline)
-  color?: string;    // severity-цвет тикета из canvas (hex)
+  color?: string;    // severity-цвет тикета из canvas (hex) — mc_hub feedback, НЕ грейд
+  mark?: string;     // грейд достоверности (evidence mark) из canvas — sovern:mark, мост NAUTILUS
   shape?: ShapeKind;
   step?: number;   // 1-based walkthrough order (Learn mode); absent → BFS fallback
   note?: string;   // narration shown when this node is the current Learn step
@@ -117,6 +118,10 @@ export interface JSONCanvasEdge {
 export interface JSONCanvas {
   nodes: JSONCanvasNode[];
   edges: JSONCanvasEdge[];
+  /** Top-level provenance (e.g. NAUTILUS bridge's `desops:derived`/`desops:title`).
+   *  fromJSONCanvas/toJSONCanvas don't read or write this — it's UI-side surface
+   *  for inspecting an imported board, not a round-tripped field. */
+  metadata?: Record<string, unknown>;
 }
 
 export interface ChatMessage {
