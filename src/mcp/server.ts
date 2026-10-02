@@ -12,6 +12,8 @@ import {
   updateCanvasNode,
   readCanvasBranch,
   calculateCanvasRollup,
+  SOVERN_LAYERS,
+  SOVERN_STATUSES,
 } from "./canvasFileStore.js";
 
 // Файловый бэкенд: тот же board.canvas, который поллит UI (env SOVERN_BOARD,
@@ -58,8 +60,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {
             parent_id: { type: "string", description: "Parent node ID (optional)" },
             label: { type: "string", description: "Title of the node" },
-            layer: { type: "string", description: "SOVERN layer (human|boss|skills|coding|etc.)" },
-            status: { type: "string", description: "Initial status" },
+            layer: { type: "string", enum: [...SOVERN_LAYERS], description: "SOVERN layer — exactly one of the enum values (English), even if the user writes in another language" },
+            status: { type: "string", enum: [...SOVERN_STATUSES], description: "Initial status (default idle)" },
             budget: { type: "number", description: "Optional budget value" },
           },
           required: ["label", "layer"],
@@ -76,7 +78,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               type: "object",
               properties: {
                 label: { type: "string" },
-                status: { type: "string" },
+                status: { type: "string", enum: [...SOVERN_STATUSES] },
                 budget: { type: "number" },
                 agent: { type: "string" },
               }

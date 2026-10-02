@@ -218,6 +218,23 @@ export class CanvasFileStore {
 
 // ── Операции над сырым канвасом (используются server.ts) ────────────────────
 
+// Канон значений layer/status. Зеркало `LAYERS`/`STATUSES` из src/theme/designTokens.ts (гвард —
+// layerContract.test.ts): MCP-бандл собирается отдельно (tsconfig.mcp.json) и тему не тянет.
+// Свободная форма («кодинг», «Coding», «в работе») раньше давала узел вне всех дорожек доски —
+// главный механизм просадки tool use на русских репликах (intake NAUTILUS#278).
+export const SOVERN_LAYERS = [
+  'human', 'boss', 'skills', 'coding', 'gateway', 'memory', 'tools',
+  'observability', 'hosting', 'projects',
+  'lms', 'blog', 'hub', 'mentor', 'workers', 'course', 'infra',
+] as const;
+export const SOVERN_STATUSES = ['idle', 'pending', 'active', 'done', 'blocked'] as const;
+
+function assertIn(kind: string, value: string, allowed: readonly string[]): void {
+  if (!allowed.includes(value)) {
+    throw new Error(`Unknown ${kind} "${value}". Use exactly one of: ${allowed.join(', ')}`);
+  }
+}
+
 export interface CreateNodeInput {
   label: string;
   layer: string;
@@ -228,6 +245,8 @@ export interface CreateNodeInput {
 
 /** Добавляет ноду (и ребро от родителя) в сыром формате JSON Canvas. */
 export function createCanvasNode(canvas: JSONCanvas, input: CreateNodeInput): JSONCanvasNode {
+  assertIn('layer', input.layer, SOVERN_LAYERS);
+  if (input.status !== undefined) assertIn('status', input.status, SOVERN_STATUSES);
   if (input.parentId && !canvas.nodes.some((n) => n.id === input.parentId)) {
     throw new Error(`Parent node not found: ${input.parentId}`);
   }
@@ -268,6 +287,7 @@ export interface UpdateNodePatch {
 export function updateCanvasNode(canvas: JSONCanvas, nodeId: string, patch: UpdateNodePatch): JSONCanvasNode {
   const node = canvas.nodes.find((n) => n.id === nodeId);
   if (!node) throw new Error(`Node not found: ${nodeId}`);
+  if (patch.status !== undefined) assertIn('status', patch.status, SOVERN_STATUSES);
   if (patch.label !== undefined) node.text = patch.label;
   const meta = (node.metadata ??= {});
   if (patch.status !== undefined) meta['sovern:status'] = patch.status;

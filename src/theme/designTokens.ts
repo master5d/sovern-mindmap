@@ -6,12 +6,12 @@ export interface TokenParseResult {
   warnings: string[];
 }
 
-const LAYERS = [
+export const LAYERS = [
   'human', 'boss', 'skills', 'coding', 'gateway', 'memory', 'tools',
   'observability', 'hosting', 'projects',
   'lms', 'blog', 'hub', 'mentor', 'workers', 'course', 'infra',
 ];
-const STATUSES = ['idle', 'pending', 'active', 'done', 'blocked'];
+export const STATUSES = ['idle', 'pending', 'active', 'done', 'blocked'];
 
 // нормализованный путь (lowercase, '/'→'.') → CSS-переменная
 const FIXED_MAP: Record<string, string> = {
